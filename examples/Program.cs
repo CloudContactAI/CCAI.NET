@@ -27,6 +27,10 @@ public class Program
         // Run the progress tracking example
         // await ProgressTrackingExample.RunAsync();
         
+        // Run the MMS example
+        // var mmsExample = new MMSExample("YOUR-CLIENT-ID", "YOUR-API-KEY");
+        // await mmsExample.RunAllExamplesAsync();
+        
         Console.WriteLine("\nExamples completed. Press any key to exit.");
         Console.ReadKey();
     }

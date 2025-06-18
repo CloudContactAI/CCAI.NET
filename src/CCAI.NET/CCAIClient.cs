@@ -45,6 +45,11 @@ public class CCAIClient : IDisposable
     /// SMS service for sending messages
     /// </summary>
     public SMSService SMS { get; }
+    
+    /// <summary>
+    /// MMS service for sending multimedia messages
+    /// </summary>
+    public MMSService MMS { get; }
 
     /// <summary>
     /// Create a new CCAI client instance
@@ -88,6 +93,7 @@ public class CCAIClient : IDisposable
         _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         
         SMS = new SMSService(this);
+        MMS = new MMSService(this);
     }
 
     /// <summary>
@@ -115,6 +121,7 @@ public class CCAIClient : IDisposable
     /// <param name="endpoint">API endpoint</param>
     /// <param name="data">Request data</param>
     /// <param name="cancellationToken">Cancellation token</param>
+    /// <param name="headers">Additional headers</param>
     /// <typeparam name="TResponse">Response type</typeparam>
     /// <returns>API response</returns>
     /// <exception cref="HttpRequestException">If the API returns an error</exception>
@@ -122,7 +129,8 @@ public class CCAIClient : IDisposable
         HttpMethod method,
         string endpoint,
         object? data = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Dictionary<string, string>? headers = null)
     {
         var url = $"{_config.BaseUrl}{endpoint}";
         
@@ -132,6 +140,15 @@ public class CCAIClient : IDisposable
         {
             var json = JsonSerializer.Serialize(data, _jsonOptions);
             request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+        }
+        
+        // Add additional headers if provided
+        if (headers != null)
+        {
+            foreach (var (key, value) in headers)
+            {
+                request.Headers.Add(key, value);
+            }
         }
         
         using var response = await _httpClient.SendAsync(request, cancellationToken);
@@ -157,15 +174,17 @@ public class CCAIClient : IDisposable
     /// <param name="endpoint">API endpoint</param>
     /// <param name="data">Request data</param>
     /// <param name="cancellationToken">Cancellation token</param>
+    /// <param name="headers">Additional headers</param>
     /// <returns>API response as a dictionary</returns>
     /// <exception cref="HttpRequestException">If the API returns an error</exception>
     public async Task<Dictionary<string, JsonElement>> RequestAsync(
         HttpMethod method,
         string endpoint,
         object? data = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        Dictionary<string, string>? headers = null)
     {
-        return await RequestAsync<Dictionary<string, JsonElement>>(method, endpoint, data, cancellationToken);
+        return await RequestAsync<Dictionary<string, JsonElement>>(method, endpoint, data, cancellationToken, headers);
     }
 
     /// <summary>

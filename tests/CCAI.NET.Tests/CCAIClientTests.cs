@@ -3,6 +3,7 @@
 
 using System.Net;
 using System.Text.Json;
+using CCAI.NET.SMS;
 using Moq;
 using Moq.Protected;
 using Xunit;
@@ -87,6 +88,27 @@ public class CCAIClientTests
     }
     
     [Fact]
+    public void Constructor_InitializesServices()
+    {
+        // Arrange
+        var config = new CCAIConfig
+        {
+            ClientId = "test-client-id",
+            ApiKey = "test-api-key"
+        };
+        
+        // Act
+        using var client = new CCAIClient(config);
+        
+        // Assert
+        Assert.NotNull(client.SMS);
+        Assert.IsType<SMSService>(client.SMS);
+        
+        Assert.NotNull(client.MMS);
+        Assert.IsType<MMSService>(client.MMS);
+    }
+    
+    [Fact]
     public async Task RequestAsync_WithSuccessfulResponse_ReturnsDeserializedResponse()
     {
         // Arrange
@@ -136,6 +158,65 @@ public class CCAIClientTests
                 req.RequestUri!.ToString() == "https://core.cloudcontactai.com/api/test-endpoint" &&
                 req.Headers.Authorization!.Scheme == "Bearer" &&
                 req.Headers.Authorization!.Parameter == "test-api-key"
+            ),
+            ItExpr.IsAny<CancellationToken>()
+        );
+    }
+    
+    [Fact]
+    public async Task RequestAsync_WithAdditionalHeaders_IncludesHeadersInRequest()
+    {
+        // Arrange
+        var handlerMock = new Mock<HttpMessageHandler>();
+        var response = new HttpResponseMessage
+        {
+            StatusCode = HttpStatusCode.OK,
+            Content = new StringContent("{\"id\":\"test-id\",\"status\":\"success\"}")
+        };
+        
+        handlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(response);
+        
+        var httpClient = new HttpClient(handlerMock.Object);
+        var config = new CCAIConfig
+        {
+            ClientId = "test-client-id",
+            ApiKey = "test-api-key"
+        };
+        
+        using var client = new CCAIClient(config, httpClient);
+        
+        var headers = new Dictionary<string, string>
+        {
+            { "ForceNewCampaign", "true" },
+            { "CustomHeader", "CustomValue" }
+        };
+        
+        // Act
+        var result = await client.RequestAsync<Dictionary<string, JsonElement>>(
+            HttpMethod.Post,
+            "/test-endpoint",
+            new { test = "data" },
+            CancellationToken.None,
+            headers
+        );
+        
+        // Assert
+        handlerMock.Protected().Verify(
+            "SendAsync",
+            Times.Once(),
+            ItExpr.Is<HttpRequestMessage>(req =>
+                req.Method == HttpMethod.Post &&
+                req.RequestUri!.ToString() == "https://core.cloudcontactai.com/api/test-endpoint" &&
+                req.Headers.Contains("ForceNewCampaign") &&
+                req.Headers.GetValues("ForceNewCampaign").First() == "true" &&
+                req.Headers.Contains("CustomHeader") &&
+                req.Headers.GetValues("CustomHeader").First() == "CustomValue"
             ),
             ItExpr.IsAny<CancellationToken>()
         );
