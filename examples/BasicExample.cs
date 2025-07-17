@@ -1,6 +1,9 @@
 // Copyright (c) 2025 CloudContactAI LLC
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using CCAI.NET;
 using CCAI.NET.SMS;
 
@@ -19,8 +22,8 @@ public class BasicExample
         // Create a new CCAI client
         var config = new CCAIConfig
         {
-            ClientId = "YOUR-CLIENT-ID",
-            ApiKey = "API-KEY-TOKEN"
+            ClientId = "YOUR_CLIENT_ID",
+            ApiKey = "YOUR_API_KEY"
         };
         
         using var ccai = new CCAIClient(config);
@@ -32,7 +35,7 @@ public class BasicExample
             {
                 FirstName = "John",
                 LastName = "Doe",
-                Phone = "+15551234567"  // Use E.164 format
+                Phone = "+1234567890"  // Use E.164 format
             }
         };
         
@@ -60,7 +63,7 @@ public class BasicExample
             var singleResponse = await ccai.SMS.SendSingleAsync(
                 firstName: "Jane",
                 lastName: "Smith",
-                phone: "+15559876543",
+                phone: "+1234567890",
                 message: "Hi ${FirstName}, thanks for your interest!",
                 title: "Single Message Test"
             );
@@ -85,8 +88,8 @@ public class BasicExample
         // Create a new CCAI client
         var config = new CCAIConfig
         {
-            ClientId = "YOUR-CLIENT-ID",
-            ApiKey = "API-KEY-TOKEN"
+            ClientId = "YOUR_CLIENT_ID",
+            ApiKey = "YOUR_API_KEY"
         };
         
         using var ccai = new CCAIClient(config);
@@ -98,7 +101,7 @@ public class BasicExample
             {
                 FirstName = "John",
                 LastName = "Doe",
-                Phone = "+15551234567"  // Use E.164 format
+                Phone = "+1234567890"  // Use E.164 format
             }
         };
         
@@ -124,7 +127,7 @@ public class BasicExample
             var singleResponse = ccai.SMS.SendSingle(
                 firstName: "Jane",
                 lastName: "Smith",
-                phone: "+15559876543",
+                phone: "+1234567890",
                 message: "Hi ${FirstName}, thanks for your interest!",
                 title: "Single Message Test"
             );

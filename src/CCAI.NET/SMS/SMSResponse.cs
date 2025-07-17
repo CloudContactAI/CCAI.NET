@@ -7,6 +7,28 @@ using System.Text.Json.Serialization;
 namespace CCAI.NET.SMS;
 
 /// <summary>
+/// Custom converter for ID that can be either string or number
+/// </summary>
+public class FlexibleIdConverter : JsonConverter<string?>
+{
+    public override string? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        return reader.TokenType switch
+        {
+            JsonTokenType.String => reader.GetString(),
+            JsonTokenType.Number => reader.GetInt64().ToString(),
+            JsonTokenType.Null => null,
+            _ => reader.GetString()
+        };
+    }
+
+    public override void Write(Utf8JsonWriter writer, string? value, JsonSerializerOptions options)
+    {
+        writer.WriteStringValue(value);
+    }
+}
+
+/// <summary>
 /// Response from the SMS API
 /// </summary>
 public class SMSResponse
@@ -15,6 +37,7 @@ public class SMSResponse
     /// Message ID
     /// </summary>
     [JsonPropertyName("id")]
+    [JsonConverter(typeof(FlexibleIdConverter))]
     public string? Id { get; set; }
     
     /// <summary>

@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using System.Text.Json;
 
 namespace CCAI.NET.SMS;
@@ -135,6 +136,8 @@ public class MMSService
         {
             var fileContent = await File.ReadAllBytesAsync(filePath, cancellationToken);
             
+            // Use a separate HttpClient for S3 upload (without authorization headers)
+            using var s3HttpClient = new HttpClient();
             using var content = new ByteArrayContent(fileContent);
             content.Headers.ContentType = new MediaTypeHeaderValue(contentType);
             
@@ -143,7 +146,7 @@ public class MMSService
                 Content = content
             };
             
-            var response = await _httpClient.SendAsync(request, cancellationToken);
+            var response = await s3HttpClient.SendAsync(request, cancellationToken);
             
             return response.IsSuccessStatusCode;
         }
