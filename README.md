@@ -1,13 +1,15 @@
 # CCAI.NET
 
-A C# client library for interacting with the CloudContactAI API.
+A C# client library for interacting with the [CloudContactAI](https://cloudcontactai.com) API.
 
 ## Features
 
 - Send SMS messages to single or multiple recipients
 - Send MMS messages with images
+- Send Email campaigns to single or multiple recipients
 - Upload images to S3 with signed URLs
 - Variable substitution in messages
+- Manage webhooks for event notifications
 - Async/await support
 - Progress tracking
 - Comprehensive error handling
@@ -124,6 +126,187 @@ var response = await ccai.MMS.SendWithImageAsync(
 Console.WriteLine($"MMS sent! Campaign ID: {response.CampaignId}");
 ```
 
+### Email Usage
+
+```csharp
+using CCAI.NET;
+using CCAI.NET.Email;
+
+// Initialize the client
+var config = new CCAIConfig
+{
+    ClientId = "YOUR-CLIENT-ID",
+    ApiKey = "YOUR-API-KEY"
+};
+
+using var ccai = new CCAIClient(config);
+
+// Send a single email
+var response = await ccai.Email.SendSingleAsync(
+    firstName: "John",
+    lastName: "Doe",
+    email: "john@example.com",
+    subject: "Welcome to Our Service",
+    message: "<p>Hello ${FirstName},</p><p>Thank you for signing up!</p>",
+    senderEmail: "noreply@yourcompany.com",
+    replyEmail: "support@yourcompany.com",
+    senderName: "Your Company",
+    title: "Welcome Email"
+);
+
+Console.WriteLine($"Email sent with ID: {response.Id}");
+
+// Send to multiple recipients
+var emailAccounts = new List<EmailAccount>
+{
+    new EmailAccount
+    {
+        FirstName = "John",
+        LastName = "Doe",
+        Email = "john@example.com"
+    },
+    new EmailAccount
+    {
+        FirstName = "Jane",
+        LastName = "Smith",
+        Email = "jane@example.com"
+    }
+};
+
+var campaign = new EmailCampaign
+{
+    Subject = "Monthly Newsletter",
+    Title = "July 2025 Newsletter",
+    Message = @"
+        <h1>Monthly Newsletter - July 2025</h1>
+        <p>Hello ${FirstName},</p>
+        <p>Here are our updates for this month...</p>
+    ",
+    SenderEmail = "newsletter@yourcompany.com",
+    ReplyEmail = "support@yourcompany.com",
+    SenderName = "Your Company Newsletter",
+    Accounts = emailAccounts,
+    CampaignType = "EMAIL",
+    AddToList = "noList",
+    ContactInput = "accounts",
+    FromType = "single",
+    Senders = new List<object>()
+};
+
+var campaignResponse = await ccai.Email.SendCampaignAsync(
+    campaign: campaign,
+    options: new EmailOptions
+    {
+        OnProgress = status => Console.WriteLine($"Progress: {status}")
+    }
+);
+
+Console.WriteLine($"Email campaign sent with ID: {campaignResponse.Id}");
+```
+
+### Scheduled Email Campaign
+
+```csharp
+// Schedule for tomorrow at 10:00 AM
+var tomorrow = DateTime.Now.AddDays(1).Date.AddHours(10);
+
+var scheduledCampaign = new EmailCampaign
+{
+    Subject = "Upcoming Event Reminder",
+    Title = "Event Reminder Campaign",
+    Message = @"
+        <h1>Reminder: Upcoming Event</h1>
+        <p>Hello ${FirstName},</p>
+        <p>This is a reminder about our upcoming event tomorrow.</p>
+    ",
+    SenderEmail = "events@yourcompany.com",
+    ReplyEmail = "events@yourcompany.com",
+    SenderName = "Your Company Events",
+    Accounts = emailAccounts,
+    ScheduledTimestamp = tomorrow.ToString("o"), // ISO 8601 format
+    ScheduledTimezone = "America/New_York"
+};
+
+var scheduledResponse = await ccai.Email.SendCampaignAsync(scheduledCampaign);
+Console.WriteLine($"Email campaign scheduled with ID: {scheduledResponse.Id}");
+```
+
+### Webhook Management
+
+```csharp
+using CCAI.NET;
+using CCAI.NET.Webhook;
+
+// Initialize the client
+var config = new CCAIConfig
+{
+    ClientId = "YOUR-CLIENT-ID",
+    ApiKey = "YOUR-API-KEY"
+};
+
+using var ccai = new CCAIClient(config);
+
+// Register a webhook
+var webhookConfig = new WebhookConfig
+{
+    Url = "https://your-webhook-endpoint.com/webhook",
+    Events = new List<WebhookEventType>
+    {
+        WebhookEventType.MessageSent,
+        WebhookEventType.MessageReceived
+    },
+    Secret = "your-webhook-secret"
+};
+
+var registration = await ccai.Webhook.RegisterAsync(webhookConfig);
+Console.WriteLine($"Webhook registered with ID: {registration.Id}");
+
+// List all webhooks
+var webhooks = await ccai.Webhook.ListAsync();
+foreach (var webhook in webhooks)
+{
+    Console.WriteLine($"Webhook ID: {webhook.Id}, URL: {webhook.Url}");
+}
+
+// Update a webhook
+var updatedConfig = new WebhookConfig
+{
+    Url = "https://your-updated-endpoint.com/webhook",
+    Events = new List<WebhookEventType> { WebhookEventType.MessageSent },
+    Secret = "your-updated-secret"
+};
+
+var updatedWebhook = await ccai.Webhook.UpdateAsync(registration.Id, updatedConfig);
+
+// Delete a webhook
+var deleteResponse = await ccai.Webhook.DeleteAsync(registration.Id);
+Console.WriteLine($"Webhook deleted: {deleteResponse.Success}");
+
+// Parse a webhook event (in your webhook handler)
+public void ProcessWebhookEvent(string json, string signature, string secret)
+{
+    // Verify the signature
+    if (ccai.Webhook.VerifySignature(signature, json, secret))
+    {
+        // Parse the event
+        var webhookEvent = ccai.Webhook.ParseEvent(json);
+        
+        if (webhookEvent is MessageSentEvent sentEvent)
+        {
+            Console.WriteLine($"Message sent to: {sentEvent.To}");
+        }
+        else if (webhookEvent is MessageReceivedEvent receivedEvent)
+        {
+            Console.WriteLine($"Message received from: {receivedEvent.From}");
+        }
+    }
+    else
+    {
+        Console.WriteLine("Invalid signature");
+    }
+}
+```
+
 ### Step-by-Step MMS Workflow
 
 ```csharp
@@ -197,6 +380,19 @@ var mmsResponse = ccai.MMS.SendSingle(
     phone: "+15551234567",
     message: "Hello ${FirstName}, check out this image!",
     title: "MMS Campaign"
+);
+
+// Send a single email synchronously
+var emailResponse = ccai.Email.SendSingle(
+    firstName: "John",
+    lastName: "Doe",
+    email: "john@example.com",
+    subject: "Welcome to Our Service",
+    message: "<p>Hello ${FirstName},</p><p>Thank you for signing up!</p>",
+    senderEmail: "noreply@yourcompany.com",
+    replyEmail: "support@yourcompany.com",
+    senderName: "Your Company",
+    title: "Welcome Email"
 );
 ```
 

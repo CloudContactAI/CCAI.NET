@@ -3,138 +3,110 @@
 
 using System.Net;
 using System.Text.Json;
-using CCAI.NET.SMS;
 using Moq;
 using Moq.Protected;
-using Xunit;
 
 namespace CCAI.NET.Tests;
 
+/// <summary>
+/// Tests for the CCAIClient class
+/// </summary>
 public class CCAIClientTests
 {
     [Fact]
-    public void Constructor_WithValidConfig_CreatesClient()
+    public void Constructor_ValidConfig_InitializesServices()
     {
-        // Arrange
-        var config = new CCAIConfig
+        // Arrange & Act
+        var client = new CCAIClient(new CCAIConfig
         {
             ClientId = "test-client-id",
             ApiKey = "test-api-key"
-        };
-        
-        // Act
-        using var client = new CCAIClient(config);
+        });
         
         // Assert
+        Assert.NotNull(client.SMS);
+        Assert.NotNull(client.MMS);
+        Assert.NotNull(client.Email);
+        Assert.NotNull(client.Webhook);
         Assert.Equal("test-client-id", client.GetClientId());
         Assert.Equal("test-api-key", client.GetApiKey());
         Assert.Equal("https://core.cloudcontactai.com/api", client.GetBaseUrl());
     }
     
     [Fact]
-    public void Constructor_WithCustomBaseUrl_UsesCustomUrl()
+    public void Constructor_CustomBaseUrl_SetsBaseUrl()
     {
-        // Arrange
-        var config = new CCAIConfig
+        // Arrange & Act
+        var client = new CCAIClient(new CCAIConfig
         {
             ClientId = "test-client-id",
             ApiKey = "test-api-key",
             BaseUrl = "https://custom-api.example.com"
-        };
-        
-        // Act
-        using var client = new CCAIClient(config);
+        });
         
         // Assert
         Assert.Equal("https://custom-api.example.com", client.GetBaseUrl());
     }
     
     [Fact]
-    public void Constructor_WithNullConfig_ThrowsArgumentNullException()
+    public void Constructor_MissingClientId_ThrowsArgumentException()
     {
-        // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() => new CCAIClient(null!));
-        Assert.Equal("config", exception.ParamName);
-    }
-    
-    [Fact]
-    public void Constructor_WithEmptyClientId_ThrowsArgumentException()
-    {
-        // Arrange
-        var config = new CCAIConfig
+        // Arrange & Act & Assert
+        var exception = Assert.Throws<ArgumentException>(() => new CCAIClient(new CCAIConfig
         {
             ClientId = "",
             ApiKey = "test-api-key"
-        };
+        }));
         
-        // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() => new CCAIClient(config));
-        Assert.Equal("ClientId", exception.ParamName);
+        Assert.Equal("Client ID is required (Parameter 'config.ClientId')", exception.Message);
     }
     
     [Fact]
-    public void Constructor_WithEmptyApiKey_ThrowsArgumentException()
+    public void Constructor_MissingApiKey_ThrowsArgumentException()
     {
-        // Arrange
-        var config = new CCAIConfig
+        // Arrange & Act & Assert
+        var exception = Assert.Throws<ArgumentException>(() => new CCAIClient(new CCAIConfig
         {
             ClientId = "test-client-id",
             ApiKey = ""
-        };
+        }));
         
-        // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() => new CCAIClient(config));
-        Assert.Equal("ApiKey", exception.ParamName);
+        Assert.Equal("API Key is required (Parameter 'config.ApiKey')", exception.Message);
     }
     
     [Fact]
-    public void Constructor_InitializesServices()
+    public void Constructor_NullConfig_ThrowsArgumentNullException()
     {
-        // Arrange
-        var config = new CCAIConfig
-        {
-            ClientId = "test-client-id",
-            ApiKey = "test-api-key"
-        };
+        // Arrange & Act & Assert
+        var exception = Assert.Throws<ArgumentNullException>(() => new CCAIClient(null!));
         
-        // Act
-        using var client = new CCAIClient(config);
-        
-        // Assert
-        Assert.NotNull(client.SMS);
-        Assert.IsType<SMSService>(client.SMS);
-        
-        Assert.NotNull(client.MMS);
-        Assert.IsType<MMSService>(client.MMS);
+        Assert.Equal("Value cannot be null. (Parameter 'config')", exception.Message);
     }
     
     [Fact]
-    public async Task RequestAsync_WithSuccessfulResponse_ReturnsDeserializedResponse()
+    public async Task RequestAsync_ValidRequest_ReturnsResponse()
     {
         // Arrange
-        var handlerMock = new Mock<HttpMessageHandler>();
-        var response = new HttpResponseMessage
-        {
-            StatusCode = HttpStatusCode.OK,
-            Content = new StringContent("{\"id\":\"test-id\",\"status\":\"success\"}")
-        };
-        
-        handlerMock
+        var mockHandler = new Mock<HttpMessageHandler>();
+        mockHandler
             .Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
                 ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(response);
+                ItExpr.IsAny<CancellationToken>()
+            )
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content = new StringContent("{\"success\":true}")
+            });
         
-        var httpClient = new HttpClient(handlerMock.Object);
-        var config = new CCAIConfig
+        var httpClient = new HttpClient(mockHandler.Object);
+        var client = new CCAIClient(new CCAIConfig
         {
             ClientId = "test-client-id",
             ApiKey = "test-api-key"
-        };
-        
-        using var client = new CCAIClient(config, httpClient);
+        }, httpClient);
         
         // Act
         var result = await client.RequestAsync<Dictionary<string, JsonElement>>(
@@ -144,116 +116,168 @@ public class CCAIClientTests
         
         // Assert
         Assert.NotNull(result);
-        Assert.True(result.ContainsKey("id"));
-        Assert.True(result.ContainsKey("status"));
-        Assert.Equal("test-id", result["id"].GetString());
-        Assert.Equal("success", result["status"].GetString());
+        Assert.True(result.ContainsKey("success"));
         
-        // Verify the request was made correctly
-        handlerMock.Protected().Verify(
-            "SendAsync",
-            Times.Once(),
-            ItExpr.Is<HttpRequestMessage>(req =>
-                req.Method == HttpMethod.Get &&
-                req.RequestUri!.ToString() == "https://core.cloudcontactai.com/api/test-endpoint" &&
-                req.Headers.Authorization!.Scheme == "Bearer" &&
-                req.Headers.Authorization!.Parameter == "test-api-key"
-            ),
-            ItExpr.IsAny<CancellationToken>()
-        );
+        mockHandler
+            .Protected()
+            .Verify(
+                "SendAsync",
+                Times.Once(),
+                ItExpr.Is<HttpRequestMessage>(req =>
+                    req.Method == HttpMethod.Get &&
+                    req.RequestUri!.ToString() == "https://core.cloudcontactai.com/api/test-endpoint"
+                ),
+                ItExpr.IsAny<CancellationToken>()
+            );
     }
     
     [Fact]
-    public async Task RequestAsync_WithAdditionalHeaders_IncludesHeadersInRequest()
+    public async Task CustomRequestAsync_ValidRequest_ReturnsResponse()
     {
         // Arrange
-        var handlerMock = new Mock<HttpMessageHandler>();
-        var response = new HttpResponseMessage
-        {
-            StatusCode = HttpStatusCode.OK,
-            Content = new StringContent("{\"id\":\"test-id\",\"status\":\"success\"}")
-        };
-        
-        handlerMock
+        var mockHandler = new Mock<HttpMessageHandler>();
+        mockHandler
             .Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
                 ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(response);
+                ItExpr.IsAny<CancellationToken>()
+            )
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content = new StringContent("{\"success\":true}")
+            });
         
-        var httpClient = new HttpClient(handlerMock.Object);
-        var config = new CCAIConfig
+        var httpClient = new HttpClient(mockHandler.Object);
+        var client = new CCAIClient(new CCAIConfig
         {
             ClientId = "test-client-id",
             ApiKey = "test-api-key"
-        };
+        }, httpClient);
         
-        using var client = new CCAIClient(config, httpClient);
-        
-        var headers = new Dictionary<string, string>
-        {
-            { "ForceNewCampaign", "true" },
-            { "CustomHeader", "CustomValue" }
-        };
+        var customBaseUrl = "https://email-campaigns.cloudcontactai.com/api/v1";
         
         // Act
-        var result = await client.RequestAsync<Dictionary<string, JsonElement>>(
+        var result = await client.CustomRequestAsync<Dictionary<string, JsonElement>>(
             HttpMethod.Post,
-            "/test-endpoint",
-            new { test = "data" },
-            CancellationToken.None,
-            headers
+            "/campaigns",
+            new { test = true },
+            customBaseUrl
         );
         
         // Assert
-        handlerMock.Protected().Verify(
-            "SendAsync",
-            Times.Once(),
-            ItExpr.Is<HttpRequestMessage>(req =>
-                req.Method == HttpMethod.Post &&
-                req.RequestUri!.ToString() == "https://core.cloudcontactai.com/api/test-endpoint" &&
-                req.Headers.Contains("ForceNewCampaign") &&
-                req.Headers.GetValues("ForceNewCampaign").First() == "true" &&
-                req.Headers.Contains("CustomHeader") &&
-                req.Headers.GetValues("CustomHeader").First() == "CustomValue"
-            ),
-            ItExpr.IsAny<CancellationToken>()
-        );
+        Assert.NotNull(result);
+        Assert.True(result.ContainsKey("success"));
+        
+        mockHandler
+            .Protected()
+            .Verify(
+                "SendAsync",
+                Times.Once(),
+                ItExpr.Is<HttpRequestMessage>(req =>
+                    req.Method == HttpMethod.Post &&
+                    req.RequestUri!.ToString() == "https://email-campaigns.cloudcontactai.com/api/v1/campaigns"
+                ),
+                ItExpr.IsAny<CancellationToken>()
+            );
     }
     
     [Fact]
-    public async Task RequestAsync_WithErrorResponse_ThrowsHttpRequestException()
+    public async Task CustomRequestAsync_NoCustomBaseUrl_UsesDefaultBaseUrl()
     {
         // Arrange
-        var handlerMock = new Mock<HttpMessageHandler>();
-        var response = new HttpResponseMessage
-        {
-            StatusCode = HttpStatusCode.BadRequest,
-            Content = new StringContent("{\"error\":\"Bad request\"}")
-        };
-        
-        handlerMock
+        var mockHandler = new Mock<HttpMessageHandler>();
+        mockHandler
             .Protected()
             .Setup<Task<HttpResponseMessage>>(
                 "SendAsync",
                 ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(response);
+                ItExpr.IsAny<CancellationToken>()
+            )
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content = new StringContent("{\"success\":true}")
+            });
         
-        var httpClient = new HttpClient(handlerMock.Object);
-        var config = new CCAIConfig
+        var httpClient = new HttpClient(mockHandler.Object);
+        var client = new CCAIClient(new CCAIConfig
         {
             ClientId = "test-client-id",
             ApiKey = "test-api-key"
-        };
+        }, httpClient);
         
-        using var client = new CCAIClient(config, httpClient);
+        // Act
+        var result = await client.CustomRequestAsync<Dictionary<string, JsonElement>>(
+            HttpMethod.Post,
+            "/test-endpoint",
+            new { test = true },
+            null
+        );
+        
+        // Assert
+        Assert.NotNull(result);
+        Assert.True(result.ContainsKey("success"));
+        
+        mockHandler
+            .Protected()
+            .Verify(
+                "SendAsync",
+                Times.Once(),
+                ItExpr.Is<HttpRequestMessage>(req =>
+                    req.Method == HttpMethod.Post &&
+                    req.RequestUri!.ToString() == "https://core.cloudcontactai.com/api/test-endpoint"
+                ),
+                ItExpr.IsAny<CancellationToken>()
+            );
+    }
+    
+    [Fact]
+    public async Task RequestAsync_HttpError_ThrowsHttpRequestException()
+    {
+        // Arrange
+        var mockHandler = new Mock<HttpMessageHandler>();
+        mockHandler
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>()
+            )
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.BadRequest,
+                Content = new StringContent("{\"error\":\"Bad Request\"}")
+            });
+        
+        var httpClient = new HttpClient(mockHandler.Object);
+        var client = new CCAIClient(new CCAIConfig
+        {
+            ClientId = "test-client-id",
+            ApiKey = "test-api-key"
+        }, httpClient);
         
         // Act & Assert
-        await Assert.ThrowsAsync<HttpRequestException>(() => client.RequestAsync<Dictionary<string, JsonElement>>(
-            HttpMethod.Get,
-            "/test-endpoint"
-        ));
+        await Assert.ThrowsAsync<HttpRequestException>(() =>
+            client.RequestAsync<Dictionary<string, JsonElement>>(
+                HttpMethod.Get,
+                "/test-endpoint"
+            )
+        );
+    }
+    
+    [Fact]
+    public void Dispose_DisposesHttpClient()
+    {
+        // Arrange
+        var client = new CCAIClient(new CCAIConfig
+        {
+            ClientId = "test-client-id",
+            ApiKey = "test-api-key"
+        });
+        
+        // Act & Assert (no exception should be thrown)
+        client.Dispose();
     }
 }

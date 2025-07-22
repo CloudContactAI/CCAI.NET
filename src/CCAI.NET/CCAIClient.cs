@@ -6,7 +6,9 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using CCAI.NET.Email;
 using CCAI.NET.SMS;
+using CCAI.NET.Webhook;
 
 namespace CCAI.NET;
 
@@ -50,6 +52,16 @@ public class CCAIClient : IDisposable
     /// MMS service for sending multimedia messages
     /// </summary>
     public MMSService MMS { get; }
+    
+    /// <summary>
+    /// Email service for sending email campaigns
+    /// </summary>
+    public EmailService Email { get; }
+    
+    /// <summary>
+    /// Webhook service for managing webhooks
+    /// </summary>
+    public WebhookService Webhook { get; }
 
     /// <summary>
     /// Create a new CCAI client instance
@@ -94,6 +106,8 @@ public class CCAIClient : IDisposable
         
         SMS = new SMSService(this);
         MMS = new MMSService(this);
+        Email = new EmailService(this);
+        Webhook = new WebhookService(this);
     }
 
     /// <summary>
@@ -132,7 +146,30 @@ public class CCAIClient : IDisposable
         CancellationToken cancellationToken = default,
         Dictionary<string, string>? headers = null)
     {
-        var url = $"{_config.BaseUrl}{endpoint}";
+        return await CustomRequestAsync<TResponse>(method, endpoint, data, _config.BaseUrl, cancellationToken, headers);
+    }
+
+    /// <summary>
+    /// Make an authenticated API request to a custom API endpoint
+    /// </summary>
+    /// <param name="method">HTTP method</param>
+    /// <param name="endpoint">API endpoint</param>
+    /// <param name="data">Request data</param>
+    /// <param name="baseUrl">Custom base URL for the API</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <param name="headers">Additional headers</param>
+    /// <typeparam name="TResponse">Response type</typeparam>
+    /// <returns>API response</returns>
+    /// <exception cref="HttpRequestException">If the API returns an error</exception>
+    public async Task<TResponse> CustomRequestAsync<TResponse>(
+        HttpMethod method,
+        string endpoint,
+        object? data = null,
+        string? baseUrl = null,
+        CancellationToken cancellationToken = default,
+        Dictionary<string, string>? headers = null)
+    {
+        var url = $"{baseUrl ?? _config.BaseUrl}{endpoint}";
         
         using var request = new HttpRequestMessage(method, url);
         
