@@ -1,14 +1,13 @@
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using CCAI.NET;
 using CCAI.NET.SMS;
 
-namespace CCAI.NET.Examples;
+namespace SmsSender;
 
-public class SmsSend
+public class Program
 {
-    public static async Task RunAsync()
+    public static async Task Main(string[] args)
     {
         var config = new CCAIConfig
         {
@@ -24,9 +23,9 @@ public class SmsSend
             var response = await ccai.SMS.SendSingleAsync(
                 firstName: "Andreas",
                 lastName: "User",
-                phone: "+14156961732",  // Replace with your phone number
-                message: "Hello ${FirstName}! This is a test message from your CCAI.NET library.",
-                title: "Test Message"
+                phone: "+14156961732",
+                message: "Hello ${FirstName}! This is a webhook test message from your CCAI.NET library at " + DateTime.Now.ToString("HH:mm:ss"),
+                title: "Webhook Test"
             );
             
             Console.WriteLine("SMS sent successfully!");
@@ -35,6 +34,10 @@ public class SmsSend
         catch (Exception ex)
         {
             Console.WriteLine($"Error: {ex.Message}");
+            if (ex.InnerException != null)
+            {
+                Console.WriteLine($"Inner error: {ex.InnerException.Message}");
+            }
         }
     }
 }

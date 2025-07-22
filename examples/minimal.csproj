@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../src/CCAI.NET/CCAI.NET.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="webhook_handler.cs" />
+    <Compile Remove="webhook_register.cs" />
+    <Compile Remove="EmailExample.cs" />
+    <Compile Remove="WebhookExample.cs" />
+    <Compile Remove="MMSExample.cs" />
+    <Compile Remove="ProgressTrackingExample.cs" />
+    <Compile Remove="BasicExample.cs" />
+    <Compile Remove="Program.cs" />
+  </ItemGroup>
+
+</Project>
