@@ -2,6 +2,7 @@
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 
 using System.Text.Json.Serialization;
+using CCAI.NET.SMS;
 
 namespace CCAI.NET.Email;
 
@@ -14,6 +15,7 @@ public record EmailResponse
     /// Campaign ID
     /// </summary>
     [JsonPropertyName("id")]
+    [JsonConverter(typeof(FlexibleIdConverter))]
     public string? Id { get; init; }
     
     /// <summary>
@@ -26,6 +28,7 @@ public record EmailResponse
     /// Campaign ID (alternative property)
     /// </summary>
     [JsonPropertyName("campaignId")]
+    [JsonConverter(typeof(FlexibleIdConverter))]
     public string? CampaignId { get; init; }
     
     /// <summary>

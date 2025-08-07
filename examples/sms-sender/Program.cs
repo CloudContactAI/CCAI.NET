@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using CCAI.NET;
 using CCAI.NET.SMS;
+using DotNetEnv;
 
 namespace SmsSender;
 
@@ -9,10 +10,12 @@ public class Program
 {
     public static async Task Main(string[] args)
     {
+        Env.Load();
+        
         var config = new CCAIConfig
         {
-            ClientId = "2682",
-            ApiKey = "eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJpbmZvQGFsbGNvZGUuY29tIiwiaXNzIjoiY2xvdWRjb250YWN0IiwibmJmIjoxNzE5NDQwMjM2LCJpYXQiOjE3MTk0NDAyMzYsInJvbGUiOiJVU0VSIiwiY2xpZW50SWQiOjI2ODIsImlkIjoyNzY0LCJ0eXBlIjoiQVBJX0tFWSIsImtleV9yYW5kb21faWQiOiI1MGRiOTUzZC1hMjUxLTRmZjMtODI5Yi01NjIyOGRhOGE1YTAifQ.PKVjXYHdjBMum9cTgLzFeY2KIb9b2tjawJ0WXalsb8Bckw1RuxeiYKS1bw5Cc36_Rfmivze0T7r-Zy0PVj2omDLq65io0zkBzIEJRNGDn3gx_AqmBrJ3yGnz9s0WTMr2-F1TFPUByzbj1eSOASIKeI7DGufTA5LDrRclVkz32Oo"
+            ClientId = Environment.GetEnvironmentVariable("CCAI_CLIENT_ID") ?? throw new InvalidOperationException("CCAI_CLIENT_ID not found"),
+            ApiKey = Environment.GetEnvironmentVariable("CCAI_API_KEY") ?? throw new InvalidOperationException("CCAI_API_KEY not found")
         };
         
         using var ccai = new CCAIClient(config);
@@ -21,9 +24,9 @@ public class Program
         {
             Console.WriteLine("Sending SMS...");
             var response = await ccai.SMS.SendSingleAsync(
-                firstName: "Andreas",
-                lastName: "User",
-                phone: "+14156961732",
+                firstName: Environment.GetEnvironmentVariable("TEST_FIRST_NAME") ?? "John",
+                lastName: Environment.GetEnvironmentVariable("TEST_LAST_NAME") ?? "Doe",
+                phone: Environment.GetEnvironmentVariable("TEST_PHONE_NUMBER") ?? throw new InvalidOperationException("TEST_PHONE_NUMBER not found"),
                 message: "Hello ${FirstName}! This is a webhook test message from your CCAI.NET library at " + DateTime.Now.ToString("HH:mm:ss"),
                 title: "Webhook Test"
             );

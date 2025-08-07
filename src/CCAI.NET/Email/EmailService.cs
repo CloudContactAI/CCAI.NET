@@ -9,7 +9,6 @@ namespace CCAI.NET.Email;
 public class EmailService
 {
     private readonly CCAIClient _client;
-    private readonly string _baseUrl = "https://email-campaigns.cloudcontactai.com/api/v1";
     
     /// <summary>
     /// Create a new Email service instance
@@ -19,6 +18,11 @@ public class EmailService
     {
         _client = client;
     }
+    
+    /// <summary>
+    /// Get the email base URL with API version
+    /// </summary>
+    private string GetEmailBaseUrl() => $"{_client.GetEmailBaseUrl()}/api/v1";
     
     /// <summary>
     /// Send an email campaign to one or more recipients
@@ -116,14 +120,15 @@ public class EmailService
             // Make the API request to the email campaigns API
             var headers = new Dictionary<string, string>
             {
-                { "X-API-Source", "CCAI.NET" }
+                { "AccountId", _client.GetClientId() },
+                { "ClientId", _client.GetClientId() }
             };
             
             var response = await _client.CustomRequestAsync<EmailResponse>(
                 HttpMethod.Post,
                 endpoint,
                 campaign,
-                _baseUrl,
+                GetEmailBaseUrl(),
                 linkedCts.Token,
                 headers);
             

@@ -23,6 +23,16 @@ A C# client library for interacting with the [CloudContactAI](https://cloudconta
 
 ```bash
 dotnet add package CloudContactAI.CCAI.NET
+dotnet add package DotNetEnv
+```
+
+## Configuration
+
+Create a `.env` file in your project root:
+
+```
+CCAI_CLIENT_ID=1231
+CCAI_API_KEY=your-api-key-here
 ```
 
 ## Usage
@@ -32,12 +42,16 @@ dotnet add package CloudContactAI.CCAI.NET
 ```csharp
 using CCAI.NET;
 using CCAI.NET.SMS;
+using DotNetEnv;
+
+// Load environment variables
+Env.Load();
 
 // Initialize the client
 var config = new CCAIConfig
 {
-    ClientId = "YOUR-CLIENT-ID",
-    ApiKey = "YOUR-API-KEY"
+    ClientId = Environment.GetEnvironmentVariable("CCAI_CLIENT_ID") ?? throw new InvalidOperationException("CCAI_CLIENT_ID not found"),
+    ApiKey = Environment.GetEnvironmentVariable("CCAI_API_KEY") ?? throw new InvalidOperationException("CCAI_API_KEY not found")
 };
 
 using var ccai = new CCAIClient(config);
@@ -84,12 +98,16 @@ Console.WriteLine($"Campaign sent with ID: {campaignResponse.CampaignId}");
 ```csharp
 using CCAI.NET;
 using CCAI.NET.SMS;
+using DotNetEnv;
+
+// Load environment variables
+Env.Load();
 
 // Initialize the client
 var config = new CCAIConfig
 {
-    ClientId = "YOUR-CLIENT-ID",
-    ApiKey = "YOUR-API-KEY"
+    ClientId = Environment.GetEnvironmentVariable("CCAI_CLIENT_ID") ?? throw new InvalidOperationException("CCAI_CLIENT_ID not found"),
+    ApiKey = Environment.GetEnvironmentVariable("CCAI_API_KEY") ?? throw new InvalidOperationException("CCAI_API_KEY not found")
 };
 
 using var ccai = new CCAIClient(config);
@@ -131,12 +149,16 @@ Console.WriteLine($"MMS sent! Campaign ID: {response.CampaignId}");
 ```csharp
 using CCAI.NET;
 using CCAI.NET.Email;
+using DotNetEnv;
+
+// Load environment variables
+Env.Load();
 
 // Initialize the client
 var config = new CCAIConfig
 {
-    ClientId = "YOUR-CLIENT-ID",
-    ApiKey = "YOUR-API-KEY"
+    ClientId = Environment.GetEnvironmentVariable("CCAI_CLIENT_ID") ?? throw new InvalidOperationException("CCAI_CLIENT_ID not found"),
+    ApiKey = Environment.GetEnvironmentVariable("CCAI_API_KEY") ?? throw new InvalidOperationException("CCAI_API_KEY not found")
 };
 
 using var ccai = new CCAIClient(config);
@@ -236,12 +258,16 @@ Console.WriteLine($"Email campaign scheduled with ID: {scheduledResponse.Id}");
 ```csharp
 using CCAI.NET;
 using CCAI.NET.Webhook;
+using DotNetEnv;
+
+// Load environment variables
+Env.Load();
 
 // Initialize the client
 var config = new CCAIConfig
 {
-    ClientId = "YOUR-CLIENT-ID",
-    ApiKey = "YOUR-API-KEY"
+    ClientId = Environment.GetEnvironmentVariable("CCAI_CLIENT_ID") ?? throw new InvalidOperationException("CCAI_CLIENT_ID not found"),
+    ApiKey = Environment.GetEnvironmentVariable("CCAI_API_KEY") ?? throw new InvalidOperationException("CCAI_API_KEY not found")
 };
 
 using var ccai = new CCAIClient(config);

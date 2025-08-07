@@ -28,9 +28,54 @@ public record CCAIConfig
     public required string ApiKey { get; init; }
     
     /// <summary>
-    /// Base URL for the API
+    /// Base URL for the SMS/MMS API
     /// </summary>
     public string BaseUrl { get; init; } = "https://core.cloudcontactai.com/api";
+    
+    /// <summary>
+    /// Base URL for the Email API
+    /// </summary>
+    public string EmailBaseUrl { get; init; } = "https://email-campaigns.cloudcontactai.com";
+    
+    /// <summary>
+    /// Base URL for the Auth API
+    /// </summary>
+    public string AuthBaseUrl { get; init; } = "https://auth.cloudcontactai.com";
+    
+    /// <summary>
+    /// Whether to use test environment URLs
+    /// </summary>
+    public bool UseTestEnvironment { get; init; } = false;
+    
+    /// <summary>
+    /// Get the appropriate base URL based on environment
+    /// </summary>
+    public string GetBaseUrl()
+    {
+        return UseTestEnvironment 
+            ? "https://core-test-cloudcontactai.allcode.com/api" 
+            : BaseUrl;
+    }
+    
+    /// <summary>
+    /// Get the appropriate email base URL based on environment
+    /// </summary>
+    public string GetEmailBaseUrl()
+    {
+        return UseTestEnvironment 
+            ? "https://email-campaigns-test-cloudcontactai.allcode.com" 
+            : EmailBaseUrl;
+    }
+    
+    /// <summary>
+    /// Get the appropriate auth base URL based on environment
+    /// </summary>
+    public string GetAuthBaseUrl()
+    {
+        return UseTestEnvironment 
+            ? "https://auth-test-cloudcontactai.allcode.com" 
+            : AuthBaseUrl;
+    }
 }
 
 /// <summary>
@@ -126,7 +171,19 @@ public class CCAIClient : IDisposable
     /// Get the base URL
     /// </summary>
     /// <returns>Base URL</returns>
-    public string GetBaseUrl() => _config.BaseUrl;
+    public string GetBaseUrl() => _config.GetBaseUrl();
+    
+    /// <summary>
+    /// Get the email base URL
+    /// </summary>
+    /// <returns>Email base URL</returns>
+    public string GetEmailBaseUrl() => _config.GetEmailBaseUrl();
+    
+    /// <summary>
+    /// Get the auth base URL
+    /// </summary>
+    /// <returns>Auth base URL</returns>
+    public string GetAuthBaseUrl() => _config.GetAuthBaseUrl();
 
     /// <summary>
     /// Make an authenticated API request to the CCAI API
@@ -146,7 +203,7 @@ public class CCAIClient : IDisposable
         CancellationToken cancellationToken = default,
         Dictionary<string, string>? headers = null)
     {
-        return await CustomRequestAsync<TResponse>(method, endpoint, data, _config.BaseUrl, cancellationToken, headers);
+        return await CustomRequestAsync<TResponse>(method, endpoint, data, _config.GetBaseUrl(), cancellationToken, headers);
     }
 
     /// <summary>
@@ -169,7 +226,7 @@ public class CCAIClient : IDisposable
         CancellationToken cancellationToken = default,
         Dictionary<string, string>? headers = null)
     {
-        var url = $"{baseUrl ?? _config.BaseUrl}{endpoint}";
+        var url = $"{baseUrl ?? _config.GetBaseUrl()}{endpoint}";
         
         using var request = new HttpRequestMessage(method, url);
         
