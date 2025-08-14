@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <PackageId>CloudContactAI.CCAI.NET</PackageId>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <Authors>CloudContactAI LLC</Authors>
     <Company>CloudContactAI LLC</Company>
     <Description>C# client for CloudContactAI API</Description>
