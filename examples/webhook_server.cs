@@ -10,7 +10,7 @@ using Microsoft.Extensions.Hosting;
 
 namespace CCAI.NET.Examples;
 
-public class WebhookServer
+public class SimpleWebhookServer
 {
     public static async Task Main(string[] args)
     {

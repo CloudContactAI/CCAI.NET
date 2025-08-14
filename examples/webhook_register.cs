@@ -51,7 +51,6 @@ public class WebhookRegister
             Console.WriteLine("Webhook details:");
             Console.WriteLine($"  URL: {registration.Url}");
             Console.WriteLine($"  Events: {string.Join(", ", registration.Events)}");
-            Console.WriteLine($"  Created: {registration.CreatedAt}");
             
             // List all webhooks
             Console.WriteLine("\nAll registered webhooks:");
@@ -76,7 +75,7 @@ public class WebhookRegister
         }
         else
         {
-            await RunAsync(null);
+            await RunAsync(string.Empty);
         }
     }
 }

@@ -6,6 +6,7 @@ using System.Text.Json;
 using CCAI.NET.Email;
 using Moq;
 using Moq.Protected;
+using Xunit;
 
 namespace CCAI.NET.Tests.Email;
 

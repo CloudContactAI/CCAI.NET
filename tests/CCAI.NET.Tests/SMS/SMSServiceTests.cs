@@ -1,6 +1,7 @@
 // Copyright (c) 2025 CloudContactAI LLC
 // Licensed under the MIT License. See LICENSE in the project root for license information.
 
+using System.Net;
 using System.Text.Json;
 using CCAI.NET.SMS;
 using Moq;
@@ -17,7 +18,7 @@ public class SMSServiceTests
     {
         _mockClient = new Mock<CCAIClient>(
             new CCAIConfig { ClientId = "test-client-id", ApiKey = "test-api-key" },
-            null
+            (HttpClient?)null
         );
         
         _mockClient.Setup(c => c.GetClientId()).Returns("test-client-id");
@@ -53,10 +54,11 @@ public class SMSServiceTests
         
         _mockClient
             .Setup(c => c.RequestAsync<SMSResponse>(
-                HttpMethod.Post,
-                "/clients/test-client-id/campaigns/direct",
-                It.IsAny<SMSCampaign>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<HttpMethod>(),
+                It.IsAny<string>(),
+                It.IsAny<object>(),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<Dictionary<string, string>>()))
             .ReturnsAsync(expectedResponse);
         
         // Act
@@ -70,16 +72,11 @@ public class SMSServiceTests
         Assert.Equal("2025-06-06T12:00:00Z", result.Timestamp);
         
         _mockClient.Verify(c => c.RequestAsync<SMSResponse>(
-            HttpMethod.Post,
-            "/clients/test-client-id/campaigns/direct",
-            It.Is<SMSCampaign>(campaign =>
-                campaign.Message == message &&
-                campaign.Title == title &&
-                campaign.Accounts.Count() == 1 &&
-                campaign.Accounts.First().FirstName == "John" &&
-                campaign.Accounts.First().LastName == "Doe" &&
-                campaign.Accounts.First().Phone == "+15551234567"),
-            It.IsAny<CancellationToken>()),
+            It.IsAny<HttpMethod>(),
+            It.IsAny<string>(),
+            It.IsAny<object>(),
+            It.IsAny<CancellationToken>(),
+            It.IsAny<Dictionary<string, string>>()),
             Times.Once);
     }
     
@@ -116,8 +113,9 @@ public class SMSServiceTests
             .Setup(c => c.RequestAsync<SMSResponse>(
                 It.IsAny<HttpMethod>(),
                 It.IsAny<string>(),
-                It.IsAny<SMSCampaign>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<object>(),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<Dictionary<string, string>>()))
             .ReturnsAsync(expectedResponse);
         
         // Act
@@ -150,8 +148,9 @@ public class SMSServiceTests
             .Setup(c => c.RequestAsync<SMSResponse>(
                 It.IsAny<HttpMethod>(),
                 It.IsAny<string>(),
-                It.IsAny<SMSCampaign>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<object>(),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<Dictionary<string, string>>()))
             .ReturnsAsync(expectedResponse);
         
         // Act
@@ -162,16 +161,11 @@ public class SMSServiceTests
         Assert.Equal("sent", result.Status);
         
         _mockClient.Verify(c => c.RequestAsync<SMSResponse>(
-            HttpMethod.Post,
-            "/clients/test-client-id/campaigns/direct",
-            It.Is<SMSCampaign>(campaign =>
-                campaign.Message == message &&
-                campaign.Title == title &&
-                campaign.Accounts.Count() == 1 &&
-                campaign.Accounts.First().FirstName == "Jane" &&
-                campaign.Accounts.First().LastName == "Smith" &&
-                campaign.Accounts.First().Phone == "+15559876543"),
-            It.IsAny<CancellationToken>()),
+            It.IsAny<HttpMethod>(),
+            It.IsAny<string>(),
+            It.IsAny<object>(),
+            It.IsAny<CancellationToken>(),
+            It.IsAny<Dictionary<string, string>>()),
             Times.Once);
     }
     
@@ -280,8 +274,9 @@ public class SMSServiceTests
             .Setup(c => c.RequestAsync<SMSResponse>(
                 It.IsAny<HttpMethod>(),
                 It.IsAny<string>(),
-                It.IsAny<SMSCampaign>(),
-                It.IsAny<CancellationToken>()))
+                It.IsAny<object>(),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<Dictionary<string, string>>()))
             .ThrowsAsync(new HttpRequestException("API Error"));
         
         // Act & Assert

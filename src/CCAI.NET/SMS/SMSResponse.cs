@@ -11,6 +11,9 @@ namespace CCAI.NET.SMS;
 /// </summary>
 public class FlexibleIdConverter : JsonConverter<string?>
 {
+    /// <summary>
+    /// Reads and converts the JSON to a string value
+    /// </summary>
     public override string? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         return reader.TokenType switch
@@ -22,6 +25,9 @@ public class FlexibleIdConverter : JsonConverter<string?>
         };
     }
 
+    /// <summary>
+    /// Writes the string value to JSON
+    /// </summary>
     public override void Write(Utf8JsonWriter writer, string? value, JsonSerializerOptions options)
     {
         writer.WriteStringValue(value);

@@ -62,8 +62,8 @@ public class WebhookHandler
                     if (webhookEvent is MessageSentEvent sentEvent)
                     {
                         Console.WriteLine($"Message sent to: {sentEvent.To}");
-                        Console.WriteLine($"Message ID: {sentEvent.MessageId}");
-                        Console.WriteLine($"Status: {sentEvent.Status}");
+                        Console.WriteLine($"Message content: {sentEvent.Message}");
+                        Console.WriteLine($"From: {sentEvent.From}");
                     }
                     else if (webhookEvent is MessageReceivedEvent receivedEvent)
                     {
