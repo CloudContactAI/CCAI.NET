@@ -20,42 +20,34 @@ public class SMSService
     }
     
     /// <summary>
-    /// Send an SMS message to one or more recipients
+    /// Send an SMS message using a request object
     /// </summary>
-    /// <param name="accounts">List of recipient accounts</param>
-    /// <param name="message">Message content (can include ${FirstName} and ${LastName} variables)</param>
-    /// <param name="title">Campaign title</param>
-    /// <param name="options">Optional settings for the SMS send operation</param>
+    /// <param name="request">SMS request containing all parameters</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>API response</returns>
     /// <exception cref="ArgumentException">If required parameters are missing or invalid</exception>
-    public async Task<SMSResponse> SendAsync(
-        IEnumerable<Account> accounts,
-        string message,
-        string title,
-        SMSOptions? options = null,
-        CancellationToken cancellationToken = default)
+    public async Task<SMSResponse> SendAsync(SMSRequest request, CancellationToken cancellationToken = default)
     {
         // Validate inputs
-        var accountsList = accounts?.ToList() ?? throw new ArgumentNullException(nameof(accounts));
+        var accountsList = request.Accounts?.ToList() ?? throw new ArgumentNullException(nameof(request.Accounts));
         
         if (accountsList.Count == 0)
         {
-            throw new ArgumentException("At least one account is required", nameof(accounts));
+            throw new ArgumentException("At least one account is required", nameof(request.Accounts));
         }
         
-        if (string.IsNullOrEmpty(message))
+        if (string.IsNullOrEmpty(request.Message))
         {
-            throw new ArgumentException("Message is required", nameof(message));
+            throw new ArgumentException("Message is required", nameof(request.Message));
         }
         
-        if (string.IsNullOrEmpty(title))
+        if (string.IsNullOrEmpty(request.Title))
         {
-            throw new ArgumentException("Campaign title is required", nameof(title));
+            throw new ArgumentException("Campaign title is required", nameof(request.Title));
         }
         
         // Create options if not provided
-        options ??= new SMSOptions();
+        var options = request.Options ?? new SMSOptions();
         
         // Notify progress if callback provided
         options.NotifyProgress("Preparing to send SMS");
@@ -66,8 +58,8 @@ public class SMSService
         var campaignData = new SMSCampaign
         {
             Accounts = accountsList,
-            Message = message,
-            Title = title
+            Message = request.Message,
+            Title = request.Title
         };
         
         try
@@ -118,6 +110,29 @@ public class SMSService
     }
     
     /// <summary>
+    /// Send an SMS message to one or more recipients
+    /// </summary>
+    /// <param name="accounts">List of recipient accounts</param>
+    /// <param name="message">Message content (can include ${FirstName} and ${LastName} variables)</param>
+    /// <param name="title">Campaign title</param>
+    /// <param name="customData">Custom data to be included with the message</param>
+    /// <param name="options">Optional settings for the SMS send operation</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>API response</returns>
+    /// <exception cref="ArgumentException">If required parameters are missing or invalid</exception>
+    public Task<SMSResponse> SendAsync(
+        IEnumerable<Account> accounts,
+        string message,
+        string title,
+        string? customData = null,
+        SMSOptions? options = null,
+        CancellationToken cancellationToken = default)
+    {
+        var request = SMSRequest.Create(accounts, message, title, customData, options);
+        return SendAsync(request, cancellationToken);
+    }
+    
+    /// <summary>
     /// Send a single SMS message to one recipient
     /// </summary>
     /// <param name="firstName">Recipient's first name</param>
@@ -125,6 +140,8 @@ public class SMSService
     /// <param name="phone">Recipient's phone number (E.164 format)</param>
     /// <param name="message">Message content (can include ${FirstName} and ${LastName} variables)</param>
     /// <param name="title">Campaign title</param>
+    /// <param name="customAccountId">Custom id for the recipient account, used to identify the user externally</param>
+    /// <param name="customData">Custom data to be included with the message</param>
     /// <param name="options">Optional settings for the SMS send operation</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>API response</returns>
@@ -134,17 +151,23 @@ public class SMSService
         string phone,
         string message,
         string title,
+        string? customAccountId = null,
+        string? customData = null,
         SMSOptions? options = null,
         CancellationToken cancellationToken = default)
     {
-        var account = new Account
-        {
-            FirstName = firstName,
-            LastName = lastName,
-            Phone = phone
-        };
-        
-        return SendAsync(new[] { account }, message, title, options, cancellationToken);
+        var request = SMSRequest.CreateSingle(firstName, lastName, phone, message, title, customAccountId, customData, options);
+        return SendAsync(request, cancellationToken);
+    }
+    
+    /// <summary>
+    /// Send an SMS message using a request object (synchronous version)
+    /// </summary>
+    /// <param name="request">SMS request containing all parameters</param>
+    /// <returns>API response</returns>
+    public SMSResponse Send(SMSRequest request)
+    {
+        return SendAsync(request).GetAwaiter().GetResult();
     }
     
     /// <summary>
@@ -153,15 +176,17 @@ public class SMSService
     /// <param name="accounts">List of recipient accounts</param>
     /// <param name="message">Message content (can include ${FirstName} and ${LastName} variables)</param>
     /// <param name="title">Campaign title</param>
+    /// <param name="customData">Custom data to be included with the message</param>
     /// <param name="options">Optional settings for the SMS send operation</param>
     /// <returns>API response</returns>
     public SMSResponse Send(
         IEnumerable<Account> accounts,
         string message,
         string title,
+        string? customData = null,
         SMSOptions? options = null)
     {
-        return SendAsync(accounts, message, title, options).GetAwaiter().GetResult();
+        return SendAsync(accounts, message, title, customData, options).GetAwaiter().GetResult();
     }
     
     /// <summary>
@@ -172,6 +197,8 @@ public class SMSService
     /// <param name="phone">Recipient's phone number (E.164 format)</param>
     /// <param name="message">Message content (can include ${FirstName} and ${LastName} variables)</param>
     /// <param name="title">Campaign title</param>
+    /// <param name="customAccountId">Custom id for the recipient account, used to identify the user externally</param>
+    /// <param name="customData">Custom data to be included with the message</param>
     /// <param name="options">Optional settings for the SMS send operation</param>
     /// <returns>API response</returns>
     public SMSResponse SendSingle(
@@ -180,8 +207,10 @@ public class SMSService
         string phone,
         string message,
         string title,
+        string? customAccountId = null,
+        string? customData = null,
         SMSOptions? options = null)
     {
-        return SendSingleAsync(firstName, lastName, phone, message, title, options).GetAwaiter().GetResult();
+        return SendSingleAsync(firstName, lastName, phone, message, title, customAccountId, customData, options).GetAwaiter().GetResult();
     }
 }

@@ -27,4 +27,16 @@ public record Account
     /// </summary>
     [JsonPropertyName("phone")]
     public required string Phone { get; init; }
+    
+    /// <summary>
+    /// Custom ID provided for this recipient. This can be used to link this account to an external system
+    /// </summary>
+    [JsonPropertyName("clientExternalId")]
+    public string? CustomAccountId { get; init; } = null;
+    
+    /// <summary>
+    /// Custom data for this recipient
+    /// </summary>
+    [JsonPropertyName("messageData")]
+    public string? CustomData { get; init; } = null;
 }

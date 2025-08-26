@@ -30,17 +30,17 @@ public record CCAIConfig
     /// <summary>
     /// Base URL for the SMS/MMS API
     /// </summary>
-    public string BaseUrl { get; init; } = "https://core.cloudcontactai.com/api";
+    public string BaseUrl { get; init; } = Environment.GetEnvironmentVariable("CCAI_BASE_URL") ?? "https://core.cloudcontactai.com/api";
     
     /// <summary>
     /// Base URL for the Email API
     /// </summary>
-    public string EmailBaseUrl { get; init; } = "https://email-campaigns.cloudcontactai.com";
+    public string EmailBaseUrl { get; init; } = Environment.GetEnvironmentVariable("CCAI_EMAIL_BASE_URL") ?? "https://email-campaigns.cloudcontactai.com";
     
     /// <summary>
     /// Base URL for the Auth API
     /// </summary>
-    public string AuthBaseUrl { get; init; } = "https://auth.cloudcontactai.com";
+    public string AuthBaseUrl { get; init; } = Environment.GetEnvironmentVariable("CCAI_AUTH_BASE_URL") ?? "https://auth.cloudcontactai.com";
     
     /// <summary>
     /// Whether to use test environment URLs
@@ -53,7 +53,7 @@ public record CCAIConfig
     public string GetBaseUrl()
     {
         return UseTestEnvironment 
-            ? "https://core-test-cloudcontactai.allcode.com/api" 
+            ? Environment.GetEnvironmentVariable("CCAI_TEST_BASE_URL") ?? "https://core-test-cloudcontactai.allcode.com/api"
             : BaseUrl;
     }
     
@@ -63,7 +63,7 @@ public record CCAIConfig
     public string GetEmailBaseUrl()
     {
         return UseTestEnvironment 
-            ? "https://email-campaigns-test-cloudcontactai.allcode.com" 
+            ? Environment.GetEnvironmentVariable("CCAI_TEST_EMAIL_BASE_URL") ?? "https://email-campaigns-test-cloudcontactai.allcode.com"
             : EmailBaseUrl;
     }
     
@@ -73,7 +73,7 @@ public record CCAIConfig
     public string GetAuthBaseUrl()
     {
         return UseTestEnvironment 
-            ? "https://auth-test-cloudcontactai.allcode.com" 
+            ? Environment.GetEnvironmentVariable("CCAI_TEST_AUTH_BASE_URL") ?? "https://auth-test-cloudcontactai.allcode.com"
             : AuthBaseUrl;
     }
 }
