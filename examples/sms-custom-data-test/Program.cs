@@ -49,7 +49,7 @@ try
     var response = await ccai.SMS.SendSingleAsync(
         firstName: "John",
         lastName: "Doe",
-        phone: "+14152440933",      // Replace with your test phone number
+        phone: "+14155551212",      // Replace with your test phone number
         message: message,
         title: $"Webhook Test Campaign {uniqueId}",
         customData: customData
