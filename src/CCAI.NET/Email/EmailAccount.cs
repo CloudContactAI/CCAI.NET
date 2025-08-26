@@ -33,4 +33,11 @@ public record EmailAccount
     /// </summary>
     [JsonPropertyName("phone")]
     public string Phone { get; init; } = string.Empty;
+    
+    /// <summary>
+    /// Custom ID provided for this recipient. This can be used to link this account to an external system
+    /// </summary>
+    [JsonPropertyName("clientExternalId")]
+    public string? CustomAccountId { get; init; } = null;
+
 }

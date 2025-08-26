@@ -344,4 +344,120 @@ public class EmailServiceTests
         Assert.Equal("success", result.Status);
         Assert.Equal(1, result.MessagesSent);
     }
+    
+    [Fact]
+    public async Task SendAsync_WithEmailRequest_ReturnsResponse()
+    {
+        // Arrange
+        var accounts = new List<EmailAccount>
+        {
+            new EmailAccount
+            {
+                FirstName = "John",
+                LastName = "Doe",
+                Email = "john@example.com"
+            }
+        };
+        
+        var request = EmailRequest.Create(
+            accounts,
+            "Test Subject",
+            "Test Campaign",
+            "<p>Test message</p>",
+            "sender@example.com",
+            "reply@example.com",
+            "Test Sender"
+        );
+        
+        var responseContent = new EmailResponse
+        {
+            Id = "campaign-123",
+            Status = "success",
+            MessagesSent = 1
+        };
+        
+        _mockHttpMessageHandler
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>()
+            )
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content = new StringContent(JsonSerializer.Serialize(responseContent))
+            });
+        
+        // Act
+        var result = await _emailService.SendAsync(request);
+        
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("campaign-123", result.Id);
+        Assert.Equal("success", result.Status);
+        Assert.Equal(1, result.MessagesSent);
+    }
+    
+    [Fact]
+    public async Task SendAsync_WithEmailRequestProgressTracking_CallsProgressCallback()
+    {
+        // Arrange
+        var accounts = new List<EmailAccount>
+        {
+            new EmailAccount
+            {
+                FirstName = "John",
+                LastName = "Doe",
+                Email = "john@example.com"
+            }
+        };
+        
+        var progressMessages = new List<string>();
+        var options = new EmailOptions
+        {
+            OnProgress = message => progressMessages.Add(message)
+        };
+        
+        var request = EmailRequest.Create(
+            accounts,
+            "Test Subject",
+            "Test Campaign",
+            "<p>Test message</p>",
+            "sender@example.com",
+            "reply@example.com",
+            "Test Sender",
+            options
+        );
+        
+        var responseContent = new EmailResponse
+        {
+            Id = "campaign-123",
+            Status = "success",
+            MessagesSent = 1
+        };
+        
+        _mockHttpMessageHandler
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>()
+            )
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content = new StringContent(JsonSerializer.Serialize(responseContent))
+            });
+        
+        // Act
+        var result = await _emailService.SendAsync(request);
+        
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(3, progressMessages.Count);
+        Assert.Equal("Preparing to send email campaign", progressMessages[0]);
+        Assert.Equal("Sending email campaign", progressMessages[1]);
+        Assert.Equal("Email campaign sent successfully", progressMessages[2]);
+    }
 }

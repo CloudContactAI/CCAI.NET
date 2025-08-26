@@ -62,7 +62,8 @@ public class SMSServiceTests
             .ReturnsAsync(expectedResponse);
         
         // Act
-        var result = await _smsService.SendAsync(accounts, message, title);
+        var request = SMSRequest.Create(accounts, message, title);
+        var result = await _smsService.SendAsync(request);
         
         // Assert
         Assert.Equal("msg-123", result.Id);
@@ -119,7 +120,8 @@ public class SMSServiceTests
             .ReturnsAsync(expectedResponse);
         
         // Act
-        var result = await _smsService.SendAsync(accounts, message, title, options);
+        var request = SMSRequest.Create(accounts, message, title, null, options);
+        var result = await _smsService.SendAsync(request);
         
         // Assert
         Assert.Equal(3, progressUpdates.Count);
@@ -154,7 +156,8 @@ public class SMSServiceTests
             .ReturnsAsync(expectedResponse);
         
         // Act
-        var result = await _smsService.SendSingleAsync(firstName, lastName, phone, message, title);
+        var request = SMSRequest.CreateSingle(firstName, lastName, phone, message, title);
+        var result = await _smsService.SendAsync(request);
         
         // Assert
         Assert.Equal("msg-123", result.Id);
@@ -178,10 +181,11 @@ public class SMSServiceTests
         var title = "Test Campaign";
         
         // Act & Assert
+        var request = SMSRequest.Create(accounts, message, title);
         var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
-            _smsService.SendAsync(accounts, message, title));
+            _smsService.SendAsync(request));
         
-        Assert.Equal("accounts", exception.ParamName);
+        Assert.Contains("account", exception.ParamName);
     }
     
     [Fact]
@@ -193,10 +197,11 @@ public class SMSServiceTests
         var title = "Test Campaign";
         
         // Act & Assert
+        var request = SMSRequest.Create(accounts!, message, title);
         var exception = await Assert.ThrowsAsync<ArgumentNullException>(() =>
-            _smsService.SendAsync(accounts!, message, title));
+            _smsService.SendAsync(request));
         
-        Assert.Equal("accounts", exception.ParamName);
+        Assert.Contains("Account", exception.ParamName);
     }
     
     [Fact]
@@ -217,10 +222,11 @@ public class SMSServiceTests
         var title = "Test Campaign";
         
         // Act & Assert
+        var request = SMSRequest.Create(accounts, message, title);
         var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
-            _smsService.SendAsync(accounts, message, title));
+            _smsService.SendAsync(request));
         
-        Assert.Equal("message", exception.ParamName);
+        Assert.Contains("Message", exception.ParamName);
     }
     
     [Fact]
@@ -241,10 +247,11 @@ public class SMSServiceTests
         var title = "";
         
         // Act & Assert
+        var request = SMSRequest.Create(accounts, message, title);
         var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
-            _smsService.SendAsync(accounts, message, title));
+            _smsService.SendAsync(request));
         
-        Assert.Equal("title", exception.ParamName);
+        Assert.Contains("Title", exception.ParamName);
     }
     
     [Fact]
@@ -280,13 +287,100 @@ public class SMSServiceTests
             .ThrowsAsync(new HttpRequestException("API Error"));
         
         // Act & Assert
+        var request = SMSRequest.Create(accounts, message, title, null, options);
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            _smsService.SendAsync(accounts, message, title, options));
+            _smsService.SendAsync(request));
         
         Assert.Contains("Failed to send SMS", exception.Message);
         Assert.Equal(3, progressUpdates.Count);
         Assert.Equal("Preparing to send SMS", progressUpdates[0]);
         Assert.Equal("Sending SMS", progressUpdates[1]);
         Assert.Equal("SMS sending failed", progressUpdates[2]);
+    }
+    
+    [Fact]
+    public async Task SendAsync_WithSMSRequest_CallsClientRequestAsync()
+    {
+        // Arrange
+        var accounts = new List<Account>
+        {
+            new Account
+            {
+                FirstName = "John",
+                LastName = "Doe",
+                Phone = "+15551234567"
+            }
+        };
+        
+        var request = SMSRequest.Create(accounts, "Hello ${FirstName}!", "Test Campaign");
+        
+        var expectedResponse = new SMSResponse
+        {
+            Id = "msg-123",
+            Status = "sent"
+        };
+        
+        _mockClient
+            .Setup(c => c.RequestAsync<SMSResponse>(
+                It.IsAny<HttpMethod>(),
+                It.IsAny<string>(),
+                It.IsAny<object>(),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<Dictionary<string, string>>()))
+            .ReturnsAsync(expectedResponse);
+        
+        // Act
+        var result = await _smsService.SendAsync(request);
+        
+        // Assert
+        Assert.Equal("msg-123", result.Id);
+        Assert.Equal("sent", result.Status);
+    }
+    
+    [Fact]
+    public async Task SendAsync_WithSMSRequestProgressTracking_NotifiesProgress()
+    {
+        // Arrange
+        var accounts = new List<Account>
+        {
+            new Account
+            {
+                FirstName = "John",
+                LastName = "Doe",
+                Phone = "+15551234567"
+            }
+        };
+        
+        var progressUpdates = new List<string>();
+        var options = new SMSOptions
+        {
+            OnProgress = status => progressUpdates.Add(status)
+        };
+        
+        var request = SMSRequest.Create(accounts, "Hello ${FirstName}!", "Test Campaign", null, options);
+        
+        var expectedResponse = new SMSResponse
+        {
+            Id = "msg-123",
+            Status = "sent"
+        };
+        
+        _mockClient
+            .Setup(c => c.RequestAsync<SMSResponse>(
+                It.IsAny<HttpMethod>(),
+                It.IsAny<string>(),
+                It.IsAny<object>(),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<Dictionary<string, string>>()))
+            .ReturnsAsync(expectedResponse);
+        
+        // Act
+        var result = await _smsService.SendAsync(request);
+        
+        // Assert
+        Assert.Equal(3, progressUpdates.Count);
+        Assert.Equal("Preparing to send SMS", progressUpdates[0]);
+        Assert.Equal("Sending SMS", progressUpdates[1]);
+        Assert.Equal("SMS sent successfully", progressUpdates[2]);
     }
 }

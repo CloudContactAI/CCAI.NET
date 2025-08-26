@@ -59,7 +59,7 @@ public class CCAIClientTests
             ApiKey = "test-api-key"
         }));
         
-        Assert.Equal("Client ID is required (Parameter 'config.ClientId')", exception.Message);
+        Assert.Equal("Client ID is required (Parameter 'ClientId')", exception.Message);
     }
     
     [Fact]
@@ -72,7 +72,7 @@ public class CCAIClientTests
             ApiKey = ""
         }));
         
-        Assert.Equal("API Key is required (Parameter 'config.ApiKey')", exception.Message);
+        Assert.Equal("API Key is required (Parameter 'ApiKey')", exception.Message);
     }
     
     [Fact]

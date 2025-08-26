@@ -25,6 +25,34 @@ public class EmailService
     private string GetEmailBaseUrl() => $"{_client.GetEmailBaseUrl()}/api/v1";
     
     /// <summary>
+    /// Send an email using a request object
+    /// </summary>
+    /// <param name="request">Email request containing all parameters</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>API response</returns>
+    /// <exception cref="ArgumentException">If required parameters are missing or invalid</exception>
+    public async Task<EmailResponse> SendAsync(EmailRequest request, CancellationToken cancellationToken = default)
+    {
+        var campaign = new EmailCampaign
+        {
+            Subject = request.Subject,
+            Title = request.Title,
+            Message = request.Message,
+            SenderEmail = request.SenderEmail,
+            ReplyEmail = request.ReplyEmail,
+            SenderName = request.SenderName,
+            Accounts = request.Accounts,
+            CampaignType = "EMAIL",
+            AddToList = "noList",
+            ContactInput = "accounts",
+            FromType = "single",
+            Senders = new List<object>()
+        };
+        
+        return await SendCampaignAsync(campaign, request.Options, cancellationToken);
+    }
+    
+    /// <summary>
     /// Send an email campaign to one or more recipients
     /// </summary>
     /// <param name="campaign">Email campaign configuration</param>
@@ -170,6 +198,7 @@ public class EmailService
     /// <param name="replyEmail">Reply-to email address</param>
     /// <param name="senderName">Sender's name</param>
     /// <param name="title">Campaign title</param>
+    /// <param name="customAccountId">Custom id for the recipient account, used to identify the user externally</param>
     /// <param name="options">Optional settings for the email send operation</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>API response</returns>
@@ -183,6 +212,7 @@ public class EmailService
         string replyEmail,
         string senderName,
         string title,
+        string? customAccountId = null,
         EmailOptions? options = null,
         CancellationToken cancellationToken = default)
     {
@@ -190,7 +220,8 @@ public class EmailService
         {
             FirstName = firstName,
             LastName = lastName,
-            Email = email
+            Email = email,
+            CustomAccountId = customAccountId,
         };
         
         var campaign = new EmailCampaign
@@ -210,6 +241,16 @@ public class EmailService
         };
         
         return SendCampaignAsync(campaign, options, cancellationToken);
+    }
+    
+    /// <summary>
+    /// Send an email using a request object (synchronous version)
+    /// </summary>
+    /// <param name="request">Email request containing all parameters</param>
+    /// <returns>API response</returns>
+    public EmailResponse Send(EmailRequest request)
+    {
+        return SendAsync(request).GetAwaiter().GetResult();
     }
     
     /// <summary>
@@ -237,6 +278,7 @@ public class EmailService
     /// <param name="replyEmail">Reply-to email address</param>
     /// <param name="senderName">Sender's name</param>
     /// <param name="title">Campaign title</param>
+    /// <param name="customAccountId">Custom id for the recipient account, used to identify the user externally</param>
     /// <param name="options">Optional settings for the email send operation</param>
     /// <returns>API response</returns>
     public EmailResponse SendSingle(
@@ -249,9 +291,10 @@ public class EmailService
         string replyEmail,
         string senderName,
         string title,
+        string? customAccountId = null,
         EmailOptions? options = null)
     {
-        return SendSingleAsync(firstName, lastName, email, subject, message, senderEmail, replyEmail, senderName, title, options)
+        return SendSingleAsync(firstName, lastName, email, subject, message, senderEmail, replyEmail, senderName, title, customAccountId, options)
             .GetAwaiter()
             .GetResult();
     }
