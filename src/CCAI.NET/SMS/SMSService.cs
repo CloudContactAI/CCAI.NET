@@ -76,12 +76,18 @@ public class SMSService
                 timeoutCts.Token,
                 cancellationToken);
             
-            // Make the API request
+            // Make the API request with ForceNewCampaign header
+            var headers = new Dictionary<string, string>
+            {
+                { "ForceNewCampaign", "false" }
+            };
+            
             var response = await _client.RequestAsync<SMSResponse>(
                 HttpMethod.Post,
                 endpoint,
                 campaignData,
-                linkedCts.Token);
+                linkedCts.Token,
+                headers);
             
             // Notify progress if callback provided
             options.NotifyProgress("SMS sent successfully");
