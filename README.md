@@ -255,6 +255,79 @@ Console.WriteLine($"Email campaign scheduled with ID: {scheduledResponse.Id}");
 
 ### Webhook Management
 
+#### CloudContact Webhook Events (New Format)
+
+CloudContact now sends webhook notifications with a consistent structure for all event types:
+
+```csharp
+using CCAI.NET;
+using CCAI.NET.Webhook;
+
+// Parse CloudContact webhook event
+var cloudContactEvent = ccai.Webhook.ParseCloudContactEvent(json);
+
+switch (cloudContactEvent.EventType)
+{
+    case "message.sent":
+        Console.WriteLine($"✅ Message delivered to {cloudContactEvent.Data.To}");
+        Console.WriteLine($"   Cost: ${cloudContactEvent.Data.TotalPrice}");
+        Console.WriteLine($"   Segments: {cloudContactEvent.Data.Segments}");
+        break;
+        
+    case "message.incoming":
+        Console.WriteLine($"📨 Reply from {cloudContactEvent.Data.From}: {cloudContactEvent.Data.Message}");
+        break;
+        
+    case "message.excluded":
+        Console.WriteLine($"⚠️ Message excluded: {cloudContactEvent.Data.ExcludedReason}");
+        break;
+        
+    case "message.error.carrier":
+        Console.WriteLine($"❌ Carrier error {cloudContactEvent.Data.ErrorCode}: {cloudContactEvent.Data.ErrorMessage}");
+        break;
+        
+    case "message.error.cloudcontact":
+        Console.WriteLine($"🚨 System error {cloudContactEvent.Data.ErrorCode}: {cloudContactEvent.Data.ErrorMessage}");
+        break;
+}
+```
+
+#### Supported Event Types
+
+- **`message.sent`** - Message successfully delivered to recipient
+- **`message.incoming`** - Reply received from recipient  
+- **`message.excluded`** - Message excluded during campaign (duplicates, invalid numbers, etc.)
+- **`message.error.carrier`** - Carrier-level delivery failure
+- **`message.error.cloudcontact`** - CloudContact system error
+
+#### ASP.NET Core Webhook Endpoint
+
+```csharp
+[ApiController]
+[Route("api/[controller]")]
+public class WebhookController : ControllerBase
+{
+    [HttpPost("cloudcontact")]
+    public async Task<IActionResult> HandleCloudContactWebhook()
+    {
+        using var reader = new StreamReader(Request.Body, Encoding.UTF8);
+        var body = await reader.ReadToEndAsync();
+        
+        var webhookService = new WebhookService(null!);
+        var cloudContactEvent = webhookService.ParseCloudContactEvent(body);
+        
+        // Process the event
+        await ProcessWebhookEvent(cloudContactEvent);
+        
+        return Ok(new { status = "success" });
+    }
+}
+```
+
+#### Legacy Webhook Format (Backward Compatibility)
+
+The library still supports the original webhook format:
+
 ```csharp
 using CCAI.NET;
 using CCAI.NET.Webhook;
@@ -279,7 +352,10 @@ var webhookConfig = new WebhookConfig
     Events = new List<WebhookEventType>
     {
         WebhookEventType.MessageSent,
-        WebhookEventType.MessageReceived
+        WebhookEventType.MessageIncoming,
+        WebhookEventType.MessageExcluded,
+        WebhookEventType.MessageErrorCarrier,
+        WebhookEventType.MessageErrorCloudContact
     },
     Secret = "your-webhook-secret"
 };
@@ -314,16 +390,16 @@ public void ProcessWebhookEvent(string json, string signature, string secret)
     // Verify the signature
     if (ccai.Webhook.VerifySignature(signature, json, secret))
     {
-        // Parse the event
+        // Parse the event (supports both new and legacy formats)
         var webhookEvent = ccai.Webhook.ParseEvent(json);
         
         if (webhookEvent is MessageSentEvent sentEvent)
         {
             Console.WriteLine($"Message sent to: {sentEvent.To}");
         }
-        else if (webhookEvent is MessageReceivedEvent receivedEvent)
+        else if (webhookEvent is MessageIncomingEvent incomingEvent)
         {
-            Console.WriteLine($"Message received from: {receivedEvent.From}");
+            Console.WriteLine($"Message received from: {incomingEvent.From}");
         }
     }
     else

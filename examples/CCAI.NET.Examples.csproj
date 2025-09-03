@@ -22,4 +22,10 @@
     <ProjectReference Include="..\src\CCAI.NET\CCAI.NET.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="sms-custom-data-test/Program.cs" />
+    <Compile Remove="webhook-server/Program.cs" />
+    <Compile Remove="sms-sender/Program.cs" />
+  </ItemGroup>
+
 </Project>

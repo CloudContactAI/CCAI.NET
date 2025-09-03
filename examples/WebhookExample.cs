@@ -67,7 +67,7 @@ public class WebhookExample
                 Events = new List<WebhookEventType>
                 {
                     WebhookEventType.MessageSent,
-                    WebhookEventType.MessageReceived
+                    WebhookEventType.MessageIncoming
                 },
                 Secret = "your-webhook-secret" // Replace with your webhook secret
             };

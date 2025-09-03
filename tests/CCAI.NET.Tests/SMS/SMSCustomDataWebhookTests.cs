@@ -18,7 +18,7 @@ public class SMSCustomDataWebhookTests
     {
         _mockClient = new Mock<CCAIClient>(
             new CCAIConfig { ClientId = "test-client-id", ApiKey = "test-api-key" },
-            (HttpClient?)null
+            null!
         );
         
         _mockClient.Setup(c => c.GetClientId()).Returns("test-client-id");

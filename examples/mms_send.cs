@@ -35,7 +35,7 @@ public class MmsSend
             {
                 FirstName = "Andreas",
                 LastName = "User",
-                Phone = "+14156961732"
+                Phone = "+14155551212"
             };
             
             var options = new SMSOptions

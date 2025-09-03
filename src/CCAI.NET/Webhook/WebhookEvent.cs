@@ -6,7 +6,157 @@ using System.Text.Json.Serialization;
 namespace CCAI.NET.Webhook;
 
 /// <summary>
-/// Campaign information included in webhook events
+/// CloudContact webhook event wrapper
+/// </summary>
+public record CloudContactWebhookEvent
+{
+    /// <summary>
+    /// Event type identifier
+    /// </summary>
+    [JsonPropertyName("eventType")]
+    public string EventType { get; init; } = string.Empty;
+    
+    /// <summary>
+    /// Event data containing the message information
+    /// </summary>
+    [JsonPropertyName("data")]
+    public WebhookEventData Data { get; init; } = new();
+}
+
+/// <summary>
+/// Webhook event data containing message information
+/// </summary>
+public record WebhookEventData
+{
+    /// <summary>
+    /// SMS ID from CloudContact
+    /// </summary>
+    [JsonPropertyName("SmsSid")]
+    public int SmsSid { get; init; }
+    
+    /// <summary>
+    /// Message status (DELIVERED, RECEIVED, EXCLUDED, FAILED)
+    /// </summary>
+    [JsonPropertyName("MessageStatus")]
+    public string MessageStatus { get; init; } = string.Empty;
+    
+    /// <summary>
+    /// Recipient phone number
+    /// </summary>
+    [JsonPropertyName("To")]
+    public string To { get; init; } = string.Empty;
+    
+    /// <summary>
+    /// Message content
+    /// </summary>
+    [JsonPropertyName("Message")]
+    public string Message { get; init; } = string.Empty;
+    
+    /// <summary>
+    /// Custom data associated with the message
+    /// </summary>
+    [JsonPropertyName("CustomData")]
+    public string CustomData { get; init; } = string.Empty;
+    
+    /// <summary>
+    /// Client external ID for tracking
+    /// </summary>
+    [JsonPropertyName("ClientExternalId")]
+    public string ClientExternalId { get; init; } = string.Empty;
+    
+    /// <summary>
+    /// Campaign ID (0 for non-campaign messages)
+    /// </summary>
+    [JsonPropertyName("CampaignId")]
+    public int CampaignId { get; init; }
+    
+    /// <summary>
+    /// Campaign title
+    /// </summary>
+    [JsonPropertyName("CampaignTitle")]
+    public string CampaignTitle { get; init; } = string.Empty;
+    
+    /// <summary>
+    /// Sender phone number (for incoming messages)
+    /// </summary>
+    [JsonPropertyName("From")]
+    public string? From { get; init; }
+    
+    /// <summary>
+    /// Number of message segments (for sent messages)
+    /// </summary>
+    [JsonPropertyName("Segments")]
+    public int? Segments { get; init; }
+    
+    /// <summary>
+    /// Total price for the message (for sent messages)
+    /// </summary>
+    [JsonPropertyName("TotalPrice")]
+    public decimal? TotalPrice { get; init; }
+    
+    /// <summary>
+    /// Reason for exclusion (for excluded messages)
+    /// </summary>
+    [JsonPropertyName("ExcludedReason")]
+    public string? ExcludedReason { get; init; }
+    
+    /// <summary>
+    /// Error code (for error events)
+    /// </summary>
+    [JsonPropertyName("ErrorCode")]
+    public string? ErrorCode { get; init; }
+    
+    /// <summary>
+    /// Error message (for error events)
+    /// </summary>
+    [JsonPropertyName("ErrorMessage")]
+    public string? ErrorMessage { get; init; }
+    
+    /// <summary>
+    /// Error type (carrier or cloudcontact)
+    /// </summary>
+    [JsonPropertyName("ErrorType")]
+    public string? ErrorType { get; init; }
+}
+
+/// <summary>
+/// Base class for all webhook events (legacy support)
+/// </summary>
+public abstract record WebhookEventBase
+{
+    /// <summary>
+    /// Campaign information
+    /// </summary>
+    [JsonPropertyName("campaign")]
+    public WebhookCampaign Campaign { get; init; } = new WebhookCampaign();
+    
+    /// <summary>
+    /// Sender information
+    /// </summary>
+    [JsonPropertyName("from")]
+    public string From { get; init; } = string.Empty;
+    
+    /// <summary>
+    /// Recipient information
+    /// </summary>
+    [JsonPropertyName("to")]
+    public string To { get; init; } = string.Empty;
+    
+    /// <summary>
+    /// Message content
+    /// </summary>
+    [JsonPropertyName("message")]
+    public string Message { get; init; } = string.Empty;
+    
+    /// <summary>
+    /// Event type
+    /// </summary>
+    [JsonPropertyName("type")]
+    public abstract WebhookEventType Type { get; }
+}
+
+/// <summary>
+/// Campaign information included in webhook events (legacy support)
 /// </summary>
 public record WebhookCampaign
 {
@@ -48,43 +198,7 @@ public record WebhookCampaign
 }
 
 /// <summary>
-/// Base class for all webhook events
-/// </summary>
-public abstract record WebhookEventBase
-{
-    /// <summary>
-    /// Campaign information
-    /// </summary>
-    [JsonPropertyName("campaign")]
-    public WebhookCampaign Campaign { get; init; } = new WebhookCampaign();
-    
-    /// <summary>
-    /// Sender information
-    /// </summary>
-    [JsonPropertyName("from")]
-    public string From { get; init; } = string.Empty;
-    
-    /// <summary>
-    /// Recipient information
-    /// </summary>
-    [JsonPropertyName("to")]
-    public string To { get; init; } = string.Empty;
-    
-    /// <summary>
-    /// Message content
-    /// </summary>
-    [JsonPropertyName("message")]
-    public string Message { get; init; } = string.Empty;
-    
-    /// <summary>
-    /// Event type
-    /// </summary>
-    [JsonPropertyName("type")]
-    public abstract WebhookEventType Type { get; }
-}
-
-/// <summary>
-/// Message Sent (Outbound) webhook event
+/// Message Sent webhook event (legacy support)
 /// </summary>
 public record MessageSentEvent : WebhookEventBase
 {
@@ -96,13 +210,13 @@ public record MessageSentEvent : WebhookEventBase
 }
 
 /// <summary>
-/// Message Received (Inbound) webhook event
+/// Message Incoming webhook event (legacy support)
 /// </summary>
-public record MessageReceivedEvent : WebhookEventBase
+public record MessageIncomingEvent : WebhookEventBase
 {
     /// <summary>
-    /// Event type (always MessageReceived)
+    /// Event type (always MessageIncoming)
     /// </summary>
     [JsonPropertyName("type")]
-    public override WebhookEventType Type => WebhookEventType.MessageReceived;
+    public override WebhookEventType Type => WebhookEventType.MessageIncoming;
 }

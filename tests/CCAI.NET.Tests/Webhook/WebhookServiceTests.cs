@@ -133,7 +133,7 @@ public class WebhookServiceTests
         var config = new WebhookConfig
         {
             Url = "https://example.com/webhook-updated",
-            Events = new List<WebhookEventType> { WebhookEventType.MessageReceived },
+            Events = new List<WebhookEventType> { WebhookEventType.MessageIncoming },
             Secret = "test-secret-updated"
         };
         
@@ -141,7 +141,7 @@ public class WebhookServiceTests
         {
             Id = webhookId,
             Url = "https://example.com/webhook-updated",
-            Events = new List<WebhookEventType> { WebhookEventType.MessageReceived }
+            Events = new List<WebhookEventType> { WebhookEventType.MessageIncoming }
         };
         
         _mockHttpMessageHandler
@@ -165,7 +165,7 @@ public class WebhookServiceTests
         Assert.Equal(webhookId, result.Id);
         Assert.Equal("https://example.com/webhook-updated", result.Url);
         Assert.Single(result.Events);
-        Assert.Equal(WebhookEventType.MessageReceived, result.Events[0]);
+        Assert.Equal(WebhookEventType.MessageIncoming, result.Events[0]);
         
         _mockHttpMessageHandler
             .Protected()
@@ -213,7 +213,7 @@ public class WebhookServiceTests
             {
                 Id = "webhook-456",
                 Url = "https://example.com/webhook2",
-                Events = new List<WebhookEventType> { WebhookEventType.MessageReceived }
+                Events = new List<WebhookEventType> { WebhookEventType.MessageIncoming }
             }
         };
         
@@ -375,7 +375,7 @@ public class WebhookServiceTests
     }
     
     [Fact]
-    public void ParseEvent_MessageReceivedEvent_ReturnsCorrectType()
+    public void ParseEvent_MessageIncomingEvent_ReturnsCorrectType()
     {
         // Arrange
         var json = @"{
@@ -398,8 +398,8 @@ public class WebhookServiceTests
         
         // Assert
         Assert.NotNull(result);
-        Assert.IsType<MessageReceivedEvent>(result);
-        Assert.Equal(WebhookEventType.MessageReceived, result.Type);
+        Assert.IsType<MessageIncomingEvent>(result);
+        Assert.Equal(WebhookEventType.MessageIncoming, result.Type);
         Assert.Equal(12345, result.Campaign.Id);
         Assert.Equal("Test Campaign", result.Campaign.Title);
         Assert.Equal("+15559876543", result.From);

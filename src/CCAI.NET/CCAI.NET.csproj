@@ -6,18 +6,19 @@
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <PackageId>CloudContactAI.CCAI.NET</PackageId>
-    <Version>1.3.0</Version>
+    <Version>1.4.1</Version>
     <Authors>CloudContactAI LLC</Authors>
     <Company>CloudContactAI LLC</Company>
-    <Description>C# client for CloudContactAI API with SMS, MMS, Email, and Webhook support. Includes comprehensive documentation, examples, and testing framework.</Description>
+    <Description>C# client for CloudContactAI API with SMS, MMS, Email, and Webhook support. Enhanced webhook support with new CloudContact event format, environment variable configuration, and comprehensive examples.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageTags>sms;mms;email;api;client;cloud;contact;ai;cloudcontactai;webhook;messaging;notifications</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <RepositoryUrl>https://github.com/CloudContactAI/CCAI.NET</RepositoryUrl>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <PackageReleaseNotes>$([System.IO.File]::ReadAllText("$(MSBuildProjectDirectory)/RELEASE-NOTES-v1.3.0.md"))</PackageReleaseNotes>
+    <PackageReleaseNotes>$([System.IO.File]::ReadAllText("$(MSBuildProjectDirectory)/../../RELEASE-NOTES-v1.4.0.md"))</PackageReleaseNotes>
     <PackageProjectUrl>https://github.com/CloudContactAI/CCAI.NET</PackageProjectUrl>
     <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -27,9 +28,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="RELEASE-NOTES-v1.3.0.md" Pack="true" PackagePath="\" />
-    <None Include="RELEASE-NOTES-v1.2.0.md" Pack="true" PackagePath="\" />
-    <None Include="RELEASE-NOTES-v1.1.0.md" Pack="true" PackagePath="\" />
+    <None Include="../../RELEASE-NOTES-v1.4.0.md" Pack="true" PackagePath="\" />
+    <None Include="../../README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>

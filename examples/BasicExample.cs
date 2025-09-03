@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using CCAI.NET;
 using CCAI.NET.SMS;
+using DotNetEnv;
 
 namespace CCAI.NET.Examples;
 
@@ -19,23 +20,29 @@ public class BasicExample
     /// </summary>
     public static async Task RunAsync()
     {
+        // Load environment variables
+        Env.Load("./.env");
+        
         // Create a new CCAI client
         var config = new CCAIConfig
         {
-            ClientId = "YOUR_CLIENT_ID",
-            ApiKey = "YOUR_API_KEY"
+            ClientId = Environment.GetEnvironmentVariable("CCAI_CLIENT_ID") ??
+                      throw new InvalidOperationException("CCAI_CLIENT_ID not found"),
+            ApiKey = Environment.GetEnvironmentVariable("CCAI_API_KEY") ??
+                    throw new InvalidOperationException("CCAI_API_KEY not found"),
+            UseTestEnvironment = true  // Automatically uses test URLs from env vars
         };
         
         using var ccai = new CCAIClient(config);
         
-        // Example recipients
+        // Load account data from environment variables
         var accounts = new List<Account>
         {
             new Account
             {
-                FirstName = "John",
-                LastName = "Doe",
-                Phone = "+14156961732"  // Use E.164 format
+                FirstName = Environment.GetEnvironmentVariable("TEST_FIRST_NAME") ?? "John",
+                LastName = Environment.GetEnvironmentVariable("TEST_LAST_NAME") ?? "Doe",
+                Phone = Environment.GetEnvironmentVariable("TEST_PHONE_NUMBER") ?? "+14155551212"
             }
         };
         
@@ -54,24 +61,6 @@ public class BasicExample
             );
             Console.WriteLine("SMS campaign sent successfully!");
             Console.WriteLine($"ID: {campaignResponse.Id}");
-            Console.WriteLine($"Status: {campaignResponse.Status}");
-            Console.WriteLine($"Campaign ID: {campaignResponse.CampaignId}");
-            Console.WriteLine($"Messages sent: {campaignResponse.MessagesSent}");
-            
-            // Method 2: Send SMS to a single recipient
-            Console.WriteLine("\nSending message to a single recipient...");
-            var singleResponse = await ccai.SMS.SendSingleAsync(
-                firstName: "Jane",
-                lastName: "Smith",
-                phone: "+14152440933",
-                message: "Hi ${FirstName}, thanks for your interest!",
-                title: "Single Message Test"
-            );
-            Console.WriteLine("Single SMS sent successfully!");
-            Console.WriteLine($"ID: {singleResponse.Id}");
-            Console.WriteLine($"Status: {singleResponse.Status}");
-            
-            Console.WriteLine("\nAll messages sent successfully!");
         }
         catch (Exception ex)
         {
@@ -85,23 +74,29 @@ public class BasicExample
     /// </summary>
     public static void Run()
     {
+        // Load environment variables
+        Env.Load("./.env");
+        
         // Create a new CCAI client
         var config = new CCAIConfig
         {
-            ClientId = "YOUR_CLIENT_ID",
-            ApiKey = "YOUR_API_KEY"
+            ClientId = Environment.GetEnvironmentVariable("CCAI_CLIENT_ID") ??
+                      throw new InvalidOperationException("CCAI_CLIENT_ID not found"),
+            ApiKey = Environment.GetEnvironmentVariable("CCAI_API_KEY") ??
+                    throw new InvalidOperationException("CCAI_API_KEY not found"),
+            
         };
         
         using var ccai = new CCAIClient(config);
         
-        // Example recipients
+        // Load account data from environment variables
         var accounts = new List<Account>
         {
             new Account
             {
-                FirstName = "John",
-                LastName = "Doe",
-                Phone = "+14156961732"  // Use E.164 format
+                FirstName = Environment.GetEnvironmentVariable("TEST_FIRST_NAME") ?? "John",
+                LastName = Environment.GetEnvironmentVariable("TEST_LAST_NAME") ?? "Doe",
+                Phone = Environment.GetEnvironmentVariable("TEST_PHONE_NUMBER") ?? "+14155551212"
             }
         };
         
@@ -120,22 +115,6 @@ public class BasicExample
             );
             Console.WriteLine("SMS campaign sent successfully!");
             Console.WriteLine($"ID: {campaignResponse.Id}");
-            Console.WriteLine($"Status: {campaignResponse.Status}");
-            
-            // Method 2: Send SMS to a single recipient
-            Console.WriteLine("\nSending message to a single recipient...");
-            var singleResponse = ccai.SMS.SendSingle(
-                firstName: "Jane",
-                lastName: "Smith",
-                phone: "+14152440933",
-                message: "Hi ${FirstName}, thanks for your interest!",
-                title: "Single Message Test"
-            );
-            Console.WriteLine("Single SMS sent successfully!");
-            Console.WriteLine($"ID: {singleResponse.Id}");
-            Console.WriteLine($"Status: {singleResponse.Status}");
-            
-            Console.WriteLine("\nAll messages sent successfully!");
         }
         catch (Exception ex)
         {

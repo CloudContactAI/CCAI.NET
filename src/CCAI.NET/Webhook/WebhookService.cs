@@ -134,7 +134,23 @@ public class WebhookService
     }
     
     /// <summary>
-    /// Parse webhook event from JSON
+    /// Parse CloudContact webhook event from JSON
+    /// </summary>
+    /// <param name="json">JSON string</param>
+    /// <returns>Parsed CloudContact webhook event</returns>
+    public CloudContactWebhookEvent ParseCloudContactEvent(string json)
+    {
+        if (string.IsNullOrEmpty(json))
+        {
+            throw new ArgumentException("JSON is required", nameof(json));
+        }
+        
+        return JsonSerializer.Deserialize<CloudContactWebhookEvent>(json)
+            ?? throw new InvalidOperationException("Failed to deserialize CloudContact webhook event");
+    }
+    
+    /// <summary>
+    /// Parse webhook event from JSON (legacy format support)
     /// </summary>
     /// <param name="json">JSON string</param>
     /// <returns>Parsed webhook event</returns>
@@ -148,6 +164,15 @@ public class WebhookService
         // First parse as a dynamic object to get the type
         var jsonElement = JsonSerializer.Deserialize<JsonElement>(json);
         
+        // Check if this is the new CloudContact format
+        if (jsonElement.TryGetProperty("eventType", out var eventTypeElement))
+        {
+            // This is the new format, convert to legacy format for backward compatibility
+            var cloudContactEvent = ParseCloudContactEvent(json);
+            return ConvertToLegacyEvent(cloudContactEvent);
+        }
+        
+        // Legacy format
         if (!jsonElement.TryGetProperty("type", out var typeElement))
         {
             throw new InvalidOperationException("Event type not found in webhook payload");
@@ -160,15 +185,49 @@ public class WebhookService
             return JsonSerializer.Deserialize<MessageSentEvent>(json)
                 ?? throw new InvalidOperationException("Failed to deserialize MessageSentEvent");
         }
-        else if (typeString == "message.received")
+        else if (typeString == "message.received" || typeString == "message.incoming")
         {
-            return JsonSerializer.Deserialize<MessageReceivedEvent>(json)
-                ?? throw new InvalidOperationException("Failed to deserialize MessageReceivedEvent");
+            return JsonSerializer.Deserialize<MessageIncomingEvent>(json)
+                ?? throw new InvalidOperationException("Failed to deserialize MessageIncomingEvent");
         }
         else
         {
             throw new InvalidOperationException($"Unknown event type: {typeString}");
         }
+    }
+    
+    /// <summary>
+    /// Convert CloudContact webhook event to legacy format for backward compatibility
+    /// </summary>
+    /// <param name="cloudContactEvent">CloudContact webhook event</param>
+    /// <returns>Legacy webhook event</returns>
+    private WebhookEventBase ConvertToLegacyEvent(CloudContactWebhookEvent cloudContactEvent)
+    {
+        var campaign = new WebhookCampaign
+        {
+            Id = cloudContactEvent.Data.CampaignId,
+            Title = cloudContactEvent.Data.CampaignTitle,
+            Message = cloudContactEvent.Data.Message
+        };
+        
+        return cloudContactEvent.EventType switch
+        {
+            "message.sent" => new MessageSentEvent
+            {
+                Campaign = campaign,
+                From = cloudContactEvent.Data.From ?? string.Empty,
+                To = cloudContactEvent.Data.To,
+                Message = cloudContactEvent.Data.Message
+            },
+            "message.incoming" => new MessageIncomingEvent
+            {
+                Campaign = campaign,
+                From = cloudContactEvent.Data.From ?? string.Empty,
+                To = cloudContactEvent.Data.To,
+                Message = cloudContactEvent.Data.Message
+            },
+            _ => throw new InvalidOperationException($"Unsupported event type for legacy conversion: {cloudContactEvent.EventType}")
+        };
     }
     
     /// <summary>
