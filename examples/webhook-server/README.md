@@ -17,15 +17,31 @@ A simple ASP.NET Core webhook server that processes CloudContact webhook events 
 
 ## Quick Start
 
-1. **Start the server**:
+1. **Build the server**:
    ```bash
-   cd examples/webhook-server
+   git clone https://github.com/CloudContactAI/CCAI.NET.git
+   cd CCAI.NET/examples/webhook-server
+   dotnet add package CloudContactAI.CCAI.NET
+   dotnet add package DotNetEnv
+   dotnet build 
+   ```
+
+2. **Configure the server**:
+
+   Create a `.env` file in your project root:
+
+   ```bash
+   CCAI_CLIENT_ID=1231
+   CCAI_API_KEY=your-api-key-here
+   ```
+3. **Start the Server**
+   ```bash
    dotnet run
    ```
 
-2. **Server runs on**: `http://localhost:3000`
+4. **Server runs on**: `http://localhost:3000`
 
-3. **Test with sample events**:
+5. **Test with sample events**:
    ```bash
    ./test_webhook.sh
    ```
@@ -46,7 +62,7 @@ A simple ASP.NET Core webhook server that processes CloudContact webhook events 
 
 4. **Configure CloudContact**:
    - Copy the ngrok HTTPS URL (e.g., `https://abc123.ngrok.io`)
-   - In CloudContact dashboard, set webhook URL to: `https://abc123.ngrok.io/webhook`
+   - In CloudContact Settings\Webhooks, set webhook URL to: `https://abc123.ngrok.io/webhook`
 
 ## Sample Output
 
