@@ -1,17 +1,17 @@
-# CloudContact Webhook Server
+# CloudContactAI Webhook Server
 
-A simple ASP.NET Core webhook server that processes CloudContact webhook events with enhanced parsing and logging.
+A simple ASP.NET Core webhook server that processes CloudContactAI webhook events with enhanced parsing and logging.
 
 ## Features
 
-- **CloudContact Event Processing**: Automatically parses and displays all 5 CloudContact event types
+- **CloudContactAI Event Processing**: Automatically parses and displays all 5 CloudContactAI event types
 - **Enhanced Logging**: Color-coded console output with emojis for easy identification
 - **Event Type Support**:
   - `message.sent` - Message delivery confirmations
   - `message.incoming` - Incoming replies from recipients
   - `message.excluded` - Messages excluded from campaigns
   - `message.error.carrier` - Carrier-level delivery failures
-  - `message.error.cloudcontact` - CloudContact system errors
+  - `message.error.cloudcontact` - CloudContactAI system errors
 - **Backward Compatibility**: Still handles legacy webhook formats
 - **CORS Enabled**: Works with ngrok and external services
 
@@ -62,7 +62,12 @@ A simple ASP.NET Core webhook server that processes CloudContact webhook events 
 
 4. **Configure CloudContact**:
    - Copy the ngrok HTTPS URL (e.g., `https://abc123.ngrok.io`)
-   - In CloudContact Settings\Webhooks, set webhook URL to: `https://abc123.ngrok.io/webhook`
+   - In CloudContactAI Settings\Webhooks, set webhook URL to: `https://abc123.ngrok.io/webhook`
+
+5. **Send a message with CloudContactAI**:
+   - Send a message with the sms-sender project [here](https://github.com/CloudContactAI/CCAI.NET/tree/main/examples/sms-sender)
+   - Send a message through the CloudContactAI UI
+
 
 ## Sample Output
 
@@ -77,7 +82,7 @@ When a webhook is received, you'll see output like:
 📄 Raw Body:
 {"eventType":"message.sent","data":{"SmsSid":12345,"MessageStatus":"DELIVERED"...}}
 
-🎯 Parsed CloudContact Event:
+🎯 Parsed CloudContactAI Event:
    Event Type: message.sent
    Message Status: DELIVERED
    To: +1234567890
