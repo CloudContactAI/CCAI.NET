@@ -34,9 +34,14 @@ public record SMSRequest
     public SMSOptions? Options { get; init; }
     
     /// <summary>
+    /// Optional sender phone number
+    /// </summary>
+    public string? SenderPhone { get; init; }
+    
+    /// <summary>
     /// Create an SMS request for multiple recipients
     /// </summary>
-    public static SMSRequest Create(IEnumerable<Account> accounts, string message, string title, string? customData = null, SMSOptions? options = null)
+    public static SMSRequest Create(IEnumerable<Account> accounts, string message, string title, string? customData = null, SMSOptions? options = null, string? senderPhone = null)
     {
         return new SMSRequest
         {
@@ -44,14 +49,15 @@ public record SMSRequest
             Message = message,
             Title = title,
             CustomData = customData,
-            Options = options
+            Options = options,
+            SenderPhone = senderPhone
         };
     }
     
     /// <summary>
     /// Create an SMS request for a single recipient
     /// </summary>
-    public static SMSRequest CreateSingle(string firstName, string lastName, string phone, string message, string title, string? customAccountId = null, string? customData = null, SMSOptions? options = null)
+    public static SMSRequest CreateSingle(string firstName, string lastName, string phone, string message, string title, string? customAccountId = null, string? customData = null, SMSOptions? options = null, string? senderPhone = null)
     {
         var account = new Account
         {
@@ -68,7 +74,8 @@ public record SMSRequest
             Message = message,
             Title = title,
             CustomData = customData,
-            Options = options
+            Options = options,
+            SenderPhone = senderPhone
         };
     }
 }

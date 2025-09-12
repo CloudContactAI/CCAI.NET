@@ -27,4 +27,10 @@ public record SMSCampaign
     /// </summary>
     [JsonPropertyName("title")]
     public required string Title { get; init; }
+    
+    /// <summary>
+    /// Optional sender phone number
+    /// </summary>
+    [JsonPropertyName("senderPhone")]
+    public string? SenderPhone { get; init; }
 }

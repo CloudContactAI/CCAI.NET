@@ -59,7 +59,8 @@ public class SMSService
         {
             Accounts = accountsList,
             Message = request.Message,
-            Title = request.Title
+            Title = request.Title,
+            SenderPhone = request.SenderPhone
         };
         
         try
@@ -123,6 +124,7 @@ public class SMSService
     /// <param name="title">Campaign title</param>
     /// <param name="customData">Custom data to be included with the message</param>
     /// <param name="options">Optional settings for the SMS send operation</param>
+    /// <param name="senderPhone">Optional sender phone number</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>API response</returns>
     /// <exception cref="ArgumentException">If required parameters are missing or invalid</exception>
@@ -132,9 +134,10 @@ public class SMSService
         string title,
         string? customData = null,
         SMSOptions? options = null,
+        string? senderPhone = null,
         CancellationToken cancellationToken = default)
     {
-        var request = SMSRequest.Create(accounts, message, title, customData, options);
+        var request = SMSRequest.Create(accounts, message, title, customData, options, senderPhone);
         return SendAsync(request, cancellationToken);
     }
     
@@ -149,6 +152,7 @@ public class SMSService
     /// <param name="customAccountId">Custom id for the recipient account, used to identify the user externally</param>
     /// <param name="customData">Custom data to be included with the message</param>
     /// <param name="options">Optional settings for the SMS send operation</param>
+    /// <param name="senderPhone">Optional sender phone number</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>API response</returns>
     public Task<SMSResponse> SendSingleAsync(
@@ -160,9 +164,10 @@ public class SMSService
         string? customAccountId = null,
         string? customData = null,
         SMSOptions? options = null,
+        string? senderPhone = null,
         CancellationToken cancellationToken = default)
     {
-        var request = SMSRequest.CreateSingle(firstName, lastName, phone, message, title, customAccountId, customData, options);
+        var request = SMSRequest.CreateSingle(firstName, lastName, phone, message, title, customAccountId, customData, options, senderPhone);
         return SendAsync(request, cancellationToken);
     }
     
@@ -184,15 +189,17 @@ public class SMSService
     /// <param name="title">Campaign title</param>
     /// <param name="customData">Custom data to be included with the message</param>
     /// <param name="options">Optional settings for the SMS send operation</param>
+    /// <param name="senderPhone">Optional sender phone number</param>
     /// <returns>API response</returns>
     public SMSResponse Send(
         IEnumerable<Account> accounts,
         string message,
         string title,
         string? customData = null,
-        SMSOptions? options = null)
+        SMSOptions? options = null,
+        string? senderPhone = null)
     {
-        return SendAsync(accounts, message, title, customData, options).GetAwaiter().GetResult();
+        return SendAsync(accounts, message, title, customData, options, senderPhone).GetAwaiter().GetResult();
     }
     
     /// <summary>
@@ -206,6 +213,7 @@ public class SMSService
     /// <param name="customAccountId">Custom id for the recipient account, used to identify the user externally</param>
     /// <param name="customData">Custom data to be included with the message</param>
     /// <param name="options">Optional settings for the SMS send operation</param>
+    /// <param name="senderPhone">Optional sender phone number</param>
     /// <returns>API response</returns>
     public SMSResponse SendSingle(
         string firstName,
@@ -215,8 +223,9 @@ public class SMSService
         string title,
         string? customAccountId = null,
         string? customData = null,
-        SMSOptions? options = null)
+        SMSOptions? options = null,
+        string? senderPhone = null)
     {
-        return SendSingleAsync(firstName, lastName, phone, message, title, customAccountId, customData, options).GetAwaiter().GetResult();
+        return SendSingleAsync(firstName, lastName, phone, message, title, customAccountId, customData, options, senderPhone).GetAwaiter().GetResult();
     }
 }
