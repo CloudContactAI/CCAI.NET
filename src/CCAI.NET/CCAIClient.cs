@@ -107,6 +107,11 @@ public class CCAIClient : IDisposable
     /// Webhook service for managing webhooks
     /// </summary>
     public WebhookService Webhook { get; }
+    
+    /// <summary>
+    /// Phone service for managing client phones
+    /// </summary>
+    public PhoneService Phone { get; }
 
     /// <summary>
     /// Create a new CCAI client instance
@@ -153,6 +158,7 @@ public class CCAIClient : IDisposable
         MMS = new MMSService(this);
         Email = new EmailService(this);
         Webhook = new WebhookService(this);
+        Phone = new PhoneService(this);
     }
 
     /// <summary>
@@ -279,6 +285,44 @@ public class CCAIClient : IDisposable
         Dictionary<string, string>? headers = null)
     {
         return await RequestAsync<Dictionary<string, JsonElement>>(method, endpoint, data, cancellationToken, headers);
+    }
+
+    /// <summary>
+    /// Make an authenticated API request to the CCAI API without expecting a JSON response
+    /// </summary>
+    /// <param name="method">HTTP method</param>
+    /// <param name="endpoint">API endpoint</param>
+    /// <param name="data">Request data</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <param name="headers">Additional headers</param>
+    /// <exception cref="HttpRequestException">If the API returns an error</exception>
+    public async Task RequestWithoutResponseAsync(
+        HttpMethod method,
+        string endpoint,
+        object? data = null,
+        CancellationToken cancellationToken = default,
+        Dictionary<string, string>? headers = null)
+    {
+        var url = $"{_config.GetBaseUrl()}{endpoint}";
+        
+        using var request = new HttpRequestMessage(method, url);
+        
+        if (data != null)
+        {
+            var json = JsonSerializer.Serialize(data, _jsonOptions);
+            request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+        }
+        
+        if (headers != null)
+        {
+            foreach (var (key, value) in headers)
+            {
+                request.Headers.Add(key, value);
+            }
+        }
+        
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+        response.EnsureSuccessStatusCode();
     }
 
     /// <summary>
