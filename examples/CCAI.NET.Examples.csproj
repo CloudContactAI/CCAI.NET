@@ -26,6 +26,7 @@
     <Compile Remove="sms-custom-data-test/Program.cs" />
     <Compile Remove="webhook-server/Program.cs" />
     <Compile Remove="sms-sender/Program.cs" />
+    <Compile Remove="sms-sender-phone/Program.cs" />
   </ItemGroup>
 
 </Project>
