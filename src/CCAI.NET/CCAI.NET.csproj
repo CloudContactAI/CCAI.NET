@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <PackageId>CloudContactAI.CCAI.NET</PackageId>
-    <Version>1.4.2</Version>
+    <Version>1.4.4</Version>
     <Authors>CloudContactAI LLC</Authors>
     <Company>CloudContactAI LLC</Company>
     <Description>C# client for CloudContactAI API with SMS, MMS, Email, and Webhook support. Enhanced webhook support with new CloudContact event format, environment variable configuration, and comprehensive examples.</Description>
@@ -15,7 +15,7 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <RepositoryUrl>https://github.com/CloudContactAI/CCAI.NET</RepositoryUrl>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <PackageReleaseNotes>$([System.IO.File]::ReadAllText("$(MSBuildProjectDirectory)/../../RELEASE-NOTES-v1.4.2.md"))</PackageReleaseNotes>
+    <PackageReleaseNotes>$([System.IO.File]::ReadAllText("$(MSBuildProjectDirectory)/../../RELEASE-NOTES-v1.4.4.md"))</PackageReleaseNotes>
     <PackageProjectUrl>https://github.com/CloudContactAI/CCAI.NET</PackageProjectUrl>
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>README.md</PackageReadmeFile>
