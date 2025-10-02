@@ -40,5 +40,11 @@ public enum WebhookEventType
     /// Triggered when a message fails due to internal CloudContact system errors
     /// </summary>
     [EnumMember(Value = "message.error.cloudcontact")]
-    MessageErrorCloudContact
+    MessageErrorCloudContact,
+    
+    /// <summary>
+    /// Triggered when a contact is unsubscribed (flagged as "do not text")
+    /// </summary>
+    [EnumMember(Value = "contact.unsubscribed")]
+    ContactUnsubscribed
 }

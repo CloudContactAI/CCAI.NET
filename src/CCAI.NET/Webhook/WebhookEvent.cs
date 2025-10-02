@@ -117,6 +117,48 @@ public record WebhookEventData
     /// </summary>
     [JsonPropertyName("ErrorType")]
     public string? ErrorType { get; init; }
+    
+    /// <summary>
+    /// Timestamp when contact was unsubscribed (for contact.unsubscribed events)
+    /// </summary>
+    [JsonPropertyName("UnsubscribedAt")]
+    public string? UnsubscribedAt { get; init; }
+    
+    /// <summary>
+    /// Contact information (for contact.unsubscribed events)
+    /// </summary>
+    [JsonPropertyName("ContactData")]
+    public ContactData? ContactData { get; init; }
+}
+
+/// <summary>
+/// Contact information for unsubscribe events
+/// </summary>
+public record ContactData
+{
+    /// <summary>
+    /// Contact's first name
+    /// </summary>
+    [JsonPropertyName("firstName")]
+    public string? FirstName { get; init; }
+    
+    /// <summary>
+    /// Contact's last name
+    /// </summary>
+    [JsonPropertyName("lastName")]
+    public string? LastName { get; init; }
+    
+    /// <summary>
+    /// Contact's email address
+    /// </summary>
+    [JsonPropertyName("email")]
+    public string? Email { get; init; }
+    
+    /// <summary>
+    /// Contact's phone number
+    /// </summary>
+    [JsonPropertyName("phone")]
+    public string? Phone { get; init; }
 }
 
 /// <summary>
@@ -219,4 +261,28 @@ public record MessageIncomingEvent : WebhookEventBase
     /// </summary>
     [JsonPropertyName("type")]
     public override WebhookEventType Type => WebhookEventType.MessageIncoming;
+}
+
+/// <summary>
+/// Contact Unsubscribed webhook event (legacy support)
+/// </summary>
+public record ContactUnsubscribedEvent : WebhookEventBase
+{
+    /// <summary>
+    /// Event type (always ContactUnsubscribed)
+    /// </summary>
+    [JsonPropertyName("type")]
+    public override WebhookEventType Type => WebhookEventType.ContactUnsubscribed;
+    
+    /// <summary>
+    /// Timestamp when contact was unsubscribed
+    /// </summary>
+    [JsonPropertyName("unsubscribedAt")]
+    public string UnsubscribedAt { get; init; } = string.Empty;
+    
+    /// <summary>
+    /// Contact information
+    /// </summary>
+    [JsonPropertyName("contactData")]
+    public ContactData ContactData { get; init; } = new();
 }

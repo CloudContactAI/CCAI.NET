@@ -190,6 +190,11 @@ public class WebhookService
             return JsonSerializer.Deserialize<MessageIncomingEvent>(json)
                 ?? throw new InvalidOperationException("Failed to deserialize MessageIncomingEvent");
         }
+        else if (typeString == "contact.unsubscribed")
+        {
+            return JsonSerializer.Deserialize<ContactUnsubscribedEvent>(json)
+                ?? throw new InvalidOperationException("Failed to deserialize ContactUnsubscribedEvent");
+        }
         else
         {
             throw new InvalidOperationException($"Unknown event type: {typeString}");
@@ -225,6 +230,15 @@ public class WebhookService
                 From = cloudContactEvent.Data.From ?? string.Empty,
                 To = cloudContactEvent.Data.To,
                 Message = cloudContactEvent.Data.Message
+            },
+            "contact.unsubscribed" => new ContactUnsubscribedEvent
+            {
+                Campaign = campaign,
+                From = cloudContactEvent.Data.From ?? cloudContactEvent.Data.To,
+                To = cloudContactEvent.Data.To,
+                Message = cloudContactEvent.Data.Message,
+                UnsubscribedAt = cloudContactEvent.Data.UnsubscribedAt ?? string.Empty,
+                ContactData = cloudContactEvent.Data.ContactData ?? new ContactData()
             },
             _ => throw new InvalidOperationException($"Unsupported event type for legacy conversion: {cloudContactEvent.EventType}")
         };
