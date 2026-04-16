@@ -11,18 +11,15 @@ namespace CCAI.NET.Tests.SMS;
 
 public class SMSServiceTests
 {
-    private readonly Mock<CCAIClient> _mockClient;
-    private readonly SMSService _smsService;
-    
+    private readonly Mock<ICCAIClient> _mockClient;
+    private readonly ISMSService _smsService;
+
     public SMSServiceTests()
     {
-        _mockClient = new Mock<CCAIClient>(
-            new CCAIConfig { ClientId = "test-client-id", ApiKey = "test-api-key" },
-            null!
-        );
-        
+        _mockClient = new Mock<ICCAIClient>();
+
         _mockClient.Setup(c => c.GetClientId()).Returns("test-client-id");
-        
+
         _smsService = new SMSService(_mockClient.Object);
     }
     
@@ -185,7 +182,7 @@ public class SMSServiceTests
         var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
             _smsService.SendAsync(request));
         
-        Assert.Contains("account", exception.ParamName);
+        Assert.Contains("Account", exception.ParamName);
     }
     
     [Fact]
@@ -350,21 +347,21 @@ public class SMSServiceTests
                 Phone = "+15551234567"
             }
         };
-        
+
         var progressUpdates = new List<string>();
         var options = new SMSOptions
         {
             OnProgress = status => progressUpdates.Add(status)
         };
-        
+
         var request = SMSRequest.Create(accounts, "Hello ${FirstName}!", "Test Campaign", null, options);
-        
+
         var expectedResponse = new SMSResponse
         {
             Id = "msg-123",
             Status = "sent"
         };
-        
+
         _mockClient
             .Setup(c => c.RequestAsync<SMSResponse>(
                 It.IsAny<HttpMethod>(),
@@ -373,14 +370,94 @@ public class SMSServiceTests
                 It.IsAny<CancellationToken>(),
                 It.IsAny<Dictionary<string, string>>()))
             .ReturnsAsync(expectedResponse);
-        
+
         // Act
         var result = await _smsService.SendAsync(request);
-        
+
         // Assert
         Assert.Equal(3, progressUpdates.Count);
         Assert.Equal("Preparing to send SMS", progressUpdates[0]);
         Assert.Equal("Sending SMS", progressUpdates[1]);
         Assert.Equal("SMS sent successfully", progressUpdates[2]);
+    }
+
+    [Fact]
+    public async Task SendAsync_WithData_IncludesDataInPayload()
+    {
+        // Arrange
+        object? capturedData = null;
+        var account = new Account
+        {
+            FirstName = "John",
+            LastName = "Doe",
+            Phone = "+15551234567",
+            Data = new Dictionary<string, string>
+            {
+                { "city", "Miami" },
+                { "country", "USA" },
+                { "plan", "premium" }
+            }
+        };
+
+        _mockClient
+            .Setup(c => c.RequestAsync<SMSResponse>(
+                It.IsAny<HttpMethod>(),
+                It.IsAny<string>(),
+                It.IsAny<object>(),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<Dictionary<string, string>>()))
+            .Callback<HttpMethod, string, object, CancellationToken, Dictionary<string, string>>(
+                (_, _, data, _, _) => capturedData = data)
+            .ReturnsAsync(new SMSResponse { Id = "msg-1", Status = "sent" });
+
+        // Act
+        var request = SMSRequest.Create(new[] { account }, "Hello ${firstName} from ${city}!", "Test");
+        await _smsService.SendAsync(request);
+
+        // Assert
+        Assert.NotNull(capturedData);
+        var campaign = capturedData as SMSCampaign;
+        Assert.NotNull(campaign);
+        var sentAccount = campaign!.Accounts.First();
+        Assert.NotNull(sentAccount.Data);
+        Assert.Equal("Miami", sentAccount.Data["city"]);
+        Assert.Equal("USA", sentAccount.Data["country"]);
+        Assert.Equal("premium", sentAccount.Data["plan"]);
+
+        // Verify JSON uses "data" key (API wire format)
+        var json = JsonSerializer.Serialize(sentAccount);
+        Assert.Contains("\"data\"", json);
+        Assert.Contains("\"city\":\"Miami\"", json);
+    }
+
+    [Fact]
+    public async Task SendAsync_ReturnsMessageAndResponseId()
+    {
+        // Arrange
+        var expectedResponse = new SMSResponse
+        {
+            Id = "msg-123",
+            Status = "sent",
+            Message = "SMS sent successfully",
+            ResponseId = "resp-abc-123"
+        };
+
+        _mockClient
+            .Setup(c => c.RequestAsync<SMSResponse>(
+                It.IsAny<HttpMethod>(),
+                It.IsAny<string>(),
+                It.IsAny<object>(),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<Dictionary<string, string>>()))
+            .ReturnsAsync(expectedResponse);
+
+        // Act
+        var account = new Account { FirstName = "John", LastName = "Doe", Phone = "+15551234567" };
+        var request = SMSRequest.Create(new[] { account }, "Hello!", "Test");
+        var result = await _smsService.SendAsync(request);
+
+        // Assert
+        Assert.Equal("SMS sent successfully", result.Message);
+        Assert.Equal("resp-abc-123", result.ResponseId);
     }
 }

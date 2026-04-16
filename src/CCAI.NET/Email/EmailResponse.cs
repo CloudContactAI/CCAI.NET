@@ -42,7 +42,19 @@ public record EmailResponse
     /// </summary>
     [JsonPropertyName("timestamp")]
     public string? Timestamp { get; init; }
-    
+
+    /// <summary>
+    /// Human-readable message from the API
+    /// </summary>
+    [JsonPropertyName("message")]
+    public string? Message { get; init; }
+
+    /// <summary>
+    /// Unique response identifier returned by the API
+    /// </summary>
+    [JsonPropertyName("responseId")]
+    public string? ResponseId { get; init; }
+
     /// <summary>
     /// Additional properties returned by the API
     /// </summary>

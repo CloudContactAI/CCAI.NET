@@ -15,16 +15,16 @@ public record WebhookConfig
     /// </summary>
     [JsonPropertyName("url")]
     public required string Url { get; init; }
-    
+
     /// <summary>
-    /// Events to subscribe to
+    /// Optional secret key for webhook signature verification
     /// </summary>
-    [JsonPropertyName("events")]
-    public required IList<WebhookEventType> Events { get; init; }
-    
-    /// <summary>
-    /// Optional secret for webhook signature verification
-    /// </summary>
-    [JsonPropertyName("secret")]
+    [JsonPropertyName("secretKey")]
     public string? Secret { get; init; }
+
+    /// <summary>
+    /// Integration type filter (default: "ALL")
+    /// </summary>
+    [JsonPropertyName("integrationType")]
+    public string IntegrationType { get; init; } = "ALL";
 }

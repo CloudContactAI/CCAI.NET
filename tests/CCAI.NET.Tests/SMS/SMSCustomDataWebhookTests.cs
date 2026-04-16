@@ -11,18 +11,15 @@ namespace CCAI.NET.Tests.SMS;
 
 public class SMSCustomDataWebhookTests
 {
-    private readonly Mock<CCAIClient> _mockClient;
-    private readonly SMSService _smsService;
-    
+    private readonly Mock<ICCAIClient> _mockClient;
+    private readonly ISMSService _smsService;
+
     public SMSCustomDataWebhookTests()
     {
-        _mockClient = new Mock<CCAIClient>(
-            new CCAIConfig { ClientId = "test-client-id", ApiKey = "test-api-key" },
-            null!
-        );
-        
+        _mockClient = new Mock<ICCAIClient>();
+
         _mockClient.Setup(c => c.GetClientId()).Returns("test-client-id");
-        
+
         _smsService = new SMSService(_mockClient.Object);
     }
     

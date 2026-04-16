@@ -5,11 +5,12 @@ A C# client library for interacting with the [CloudContactAI](https://cloudconta
 ## Features
 
 - Send SMS messages to single or multiple recipients
-- Send MMS messages with images
+- Send MMS messages with images (automatic S3 upload)
 - Send Email campaigns to single or multiple recipients
-- Upload images to S3 with signed URLs
-- Variable substitution in messages
-- Manage webhooks for event notifications
+- Manage contact opt-out preferences (SetDoNotText)
+- Webhook management: register, list, update, delete
+- Webhook signature verification
+- Template variable substitution (`${firstName}`, `${lastName}`)
 - Async/await support
 - Progress tracking
 - Comprehensive error handling
@@ -253,6 +254,30 @@ var scheduledResponse = await ccai.Email.SendCampaignAsync(scheduledCampaign);
 Console.WriteLine($"Email campaign scheduled with ID: {scheduledResponse.Id}");
 ```
 
+### Contact Management
+
+Manage opt-out preferences for contacts.
+
+```csharp
+using CCAI.NET;
+
+var ccai = new CCAIClient(new CCAIConfig
+{
+    ClientId = "YOUR-CLIENT-ID",
+    ApiKey = "YOUR-API-KEY"
+});
+
+// Opt a contact out of text messages (by phone number)
+var result = await ccai.Contact.SetDoNotTextAsync(true, phone: "+15551234567");
+Console.WriteLine($"Opted out: {result.Phone}, DoNotText={result.DoNotText}");
+
+// Opt a contact back in
+await ccai.Contact.SetDoNotTextAsync(false, phone: "+15551234567");
+
+// Opt out by contactId
+await ccai.Contact.SetDoNotTextAsync(true, contactId: "contact-abc-123");
+```
+
 ### Webhook Management
 
 #### CloudContact Webhook Events (New Format)
@@ -300,26 +325,42 @@ switch (cloudContactEvent.EventType)
 - **`message.error.carrier`** - Carrier-level delivery failure
 - **`message.error.cloudcontact`** - CloudContact system error
 
-#### ASP.NET Core Webhook Endpoint
+#### Webhook Endpoint Example
 
 ```csharp
-[ApiController]
-[Route("api/[controller]")]
-public class WebhookController : ControllerBase
+using CCAI.NET;
+using CCAI.NET.Webhook;
+using DotNetEnv;
+
+// Load environment variables
+Env.Load();
+
+var config = new CCAIConfig
 {
-    [HttpPost("cloudcontact")]
-    public async Task<IActionResult> HandleCloudContactWebhook()
+    ClientId = Environment.GetEnvironmentVariable("CCAI_CLIENT_ID") ?? throw new InvalidOperationException(),
+    ApiKey = Environment.GetEnvironmentVariable("CCAI_API_KEY") ?? throw new InvalidOperationException()
+};
+
+using var ccai = new CCAIClient(config);
+
+// In your webhook handler (e.g., ASP.NET Core controller):
+public void HandleWebhook(string body, string signature)
+{
+    // Parse the webhook event
+    var cloudContactEvent = ccai.Webhook.ParseCloudContactEvent(body);
+    
+    switch (cloudContactEvent.EventType)
     {
-        using var reader = new StreamReader(Request.Body, Encoding.UTF8);
-        var body = await reader.ReadToEndAsync();
-        
-        var webhookService = new WebhookService(null!);
-        var cloudContactEvent = webhookService.ParseCloudContactEvent(body);
-        
-        // Process the event
-        await ProcessWebhookEvent(cloudContactEvent);
-        
-        return Ok(new { status = "success" });
+        case "message.sent":
+            Console.WriteLine($"✅ Message delivered to {cloudContactEvent.Data.To}");
+            break;
+        case "message.incoming":
+            Console.WriteLine($"📨 Reply from {cloudContactEvent.Data.From}");
+            break;
+        case "message.excluded":
+            Console.WriteLine($"⚠️ Message excluded");
+            break;
+        // Handle other event types...
     }
 }
 ```
@@ -384,28 +425,30 @@ var updatedWebhook = await ccai.Webhook.UpdateAsync(registration.Id, updatedConf
 var deleteResponse = await ccai.Webhook.DeleteAsync(registration.Id);
 Console.WriteLine($"Webhook deleted: {deleteResponse.Success}");
 
-// Parse a webhook event (in your webhook handler)
-public void ProcessWebhookEvent(string json, string signature, string secret)
+// Verify webhook signature (in your webhook handler)
+var signature = request.headers['x-ccai-signature'];
+var json = request.body;
+var payload = JsonDocument.Parse(json);
+var clientId = config.ClientId;
+var eventHash = payload.RootElement.GetProperty("eventHash").GetString() ?? "";
+
+if (ccai.Webhook.VerifySignature(signature, clientId, eventHash, webhookSecret))
 {
-    // Verify the signature
-    if (ccai.Webhook.VerifySignature(signature, json, secret))
+    // Signature is valid, process the webhook
+    var webhookEvent = ccai.Webhook.ParseEvent(json);
+    
+    if (webhookEvent is MessageSentEvent sentEvent)
     {
-        // Parse the event (supports both new and legacy formats)
-        var webhookEvent = ccai.Webhook.ParseEvent(json);
-        
-        if (webhookEvent is MessageSentEvent sentEvent)
-        {
-            Console.WriteLine($"Message sent to: {sentEvent.To}");
-        }
-        else if (webhookEvent is MessageIncomingEvent incomingEvent)
-        {
-            Console.WriteLine($"Message received from: {incomingEvent.From}");
-        }
+        Console.WriteLine($"Message sent to: {sentEvent.To}");
     }
-    else
+    else if (webhookEvent is MessageIncomingEvent incomingEvent)
     {
-        Console.WriteLine("Invalid signature");
+        Console.WriteLine($"Message received from: {incomingEvent.From}");
     }
+}
+else
+{
+    Console.WriteLine("Invalid signature");
 }
 ```
 

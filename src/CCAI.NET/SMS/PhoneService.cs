@@ -4,17 +4,53 @@
 namespace CCAI.NET.SMS;
 
 /// <summary>
+/// Interface for phone service for managing client phones through the CCAI API
+/// </summary>
+public interface IPhoneService
+{
+    /// <summary>
+    /// List all phones for the client
+    /// </summary>
+    Task<List<Phone>> ListAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Get a specific phone by phone ID
+    /// </summary>
+    Task<Phone> GetAsync(long phoneId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Delete a phone by ID
+    /// </summary>
+    Task DeleteAsync(long phoneId, bool release = false, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// List all phones for the client (synchronous version)
+    /// </summary>
+    List<Phone> List();
+
+    /// <summary>
+    /// Get a specific phone by phone ID (synchronous version)
+    /// </summary>
+    Phone Get(long phoneId);
+
+    /// <summary>
+    /// Delete a phone by ID (synchronous version)
+    /// </summary>
+    void Delete(long phoneId, bool release = false);
+}
+
+/// <summary>
 /// Phone service for managing client phones through the CCAI API
 /// </summary>
-public class PhoneService
+public class PhoneService : IPhoneService
 {
-    private readonly CCAIClient _client;
-    
+    private readonly ICCAIClient _client;
+
     /// <summary>
     /// Create a new Phone service instance
     /// </summary>
     /// <param name="client">The parent CCAI client</param>
-    public PhoneService(CCAIClient client)
+    public PhoneService(ICCAIClient client)
     {
         _client = client;
     }

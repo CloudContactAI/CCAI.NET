@@ -69,7 +69,19 @@ public class SMSResponse
     /// </summary>
     [JsonPropertyName("timestamp")]
     public string? Timestamp { get; set; }
-    
+
+    /// <summary>
+    /// Human-readable message from the API
+    /// </summary>
+    [JsonPropertyName("message")]
+    public string? Message { get; set; }
+
+    /// <summary>
+    /// Unique response identifier returned by the API
+    /// </summary>
+    [JsonPropertyName("responseId")]
+    public string? ResponseId { get; set; }
+
     /// <summary>
     /// Additional data from the API
     /// </summary>
