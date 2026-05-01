@@ -29,6 +29,7 @@ public class CCAIClientTests
         Assert.NotNull(client.MMS);
         Assert.NotNull(client.Email);
         Assert.NotNull(client.Webhook);
+        Assert.NotNull(client.Contact);
         Assert.Equal("test-client-id", client.GetClientId());
         Assert.Equal("test-api-key", client.GetApiKey());
         Assert.Equal("https://core.cloudcontactai.com/api", client.GetBaseUrl());

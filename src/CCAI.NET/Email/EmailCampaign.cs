@@ -29,6 +29,12 @@ public record EmailCampaign
     public required string Message { get; init; }
     
     /// <summary>
+    /// Plain-text version of the email body
+    /// </summary>
+    [JsonPropertyName("textContent")]
+    public string? TextContent { get; init; }
+    
+    /// <summary>
     /// Optional editor information
     /// </summary>
     [JsonPropertyName("editor")]

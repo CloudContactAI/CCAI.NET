@@ -3,23 +3,144 @@
 
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Security.Cryptography;
 using System.Text.Json;
 
 namespace CCAI.NET.SMS;
 
 /// <summary>
+/// Interface for MMS service for sending multimedia messages through the CCAI API
+/// </summary>
+public interface IMMSService
+{
+    /// <summary>
+    /// Get a signed S3 URL to upload an image file
+    /// </summary>
+    Task<SignedUrlResponse> GetSignedUploadUrlAsync(
+        string fileName,
+        string fileType,
+        string? fileBasePath = null,
+        bool publicFile = true,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Check if a file has already been uploaded to S3
+    /// </summary>
+    Task<StoredUrlResponse> CheckFileUploadedAsync(
+        string fileKey,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Check if a file has already been uploaded to S3 (synchronous version)
+    /// </summary>
+    StoredUrlResponse CheckFileUploaded(string fileKey);
+
+    /// <summary>
+    /// Upload an image file to a signed S3 URL
+    /// </summary>
+    Task<bool> UploadImageToSignedUrlAsync(
+        string signedUrl,
+        string filePath,
+        string contentType,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Send an MMS message to one or more recipients
+    /// </summary>
+    Task<SMSResponse> SendAsync(
+        string pictureFileKey,
+        IEnumerable<Account> accounts,
+        string message,
+        string title,
+        string? senderPhone = null,
+        SMSOptions? options = null,
+        bool forceNewCampaign = true,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Send a single MMS message to one recipient
+    /// </summary>
+    Task<SMSResponse> SendSingleAsync(
+        string pictureFileKey,
+        string firstName,
+        string lastName,
+        string phone,
+        string message,
+        string title,
+        string? customData = null,
+        string? senderPhone = null,
+        SMSOptions? options = null,
+        bool forceNewCampaign = true,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Complete MMS workflow: get signed URL, upload image, and send MMS
+    /// </summary>
+    Task<SMSResponse> SendWithImageAsync(
+        string imagePath,
+        string contentType,
+        IEnumerable<Account> accounts,
+        string message,
+        string title,
+        string? senderPhone = null,
+        SMSOptions? options = null,
+        bool forceNewCampaign = true,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Send an MMS message to one or more recipients (synchronous version)
+    /// </summary>
+    SMSResponse Send(
+        string pictureFileKey,
+        IEnumerable<Account> accounts,
+        string message,
+        string title,
+        string? senderPhone = null,
+        SMSOptions? options = null,
+        bool forceNewCampaign = true);
+
+    /// <summary>
+    /// Send a single MMS message to one recipient (synchronous version)
+    /// </summary>
+    SMSResponse SendSingle(
+        string pictureFileKey,
+        string firstName,
+        string lastName,
+        string phone,
+        string message,
+        string title,
+        string? customData = null,
+        string? senderPhone = null,
+        SMSOptions? options = null,
+        bool forceNewCampaign = true);
+
+    /// <summary>
+    /// Complete MMS workflow: get signed URL, upload image, and send MMS (synchronous version)
+    /// </summary>
+    SMSResponse SendWithImage(
+        string imagePath,
+        string contentType,
+        IEnumerable<Account> accounts,
+        string message,
+        string title,
+        string? senderPhone = null,
+        SMSOptions? options = null,
+        bool forceNewCampaign = true);
+}
+
+/// <summary>
 /// MMS service for sending multimedia messages through the CCAI API
 /// </summary>
-public class MMSService
+public class MMSService : IMMSService
 {
-    private readonly CCAIClient _client;
+    private readonly ICCAIClient _client;
     private readonly HttpClient _httpClient;
-    
+
     /// <summary>
     /// Create a new MMS service instance
     /// </summary>
     /// <param name="client">The parent CCAI client</param>
-    public MMSService(CCAIClient client)
+    public MMSService(ICCAIClient client)
     {
         _client = client;
         _httpClient = new HttpClient();
@@ -56,10 +177,10 @@ public class MMSService
         
         // Use default fileBasePath if not provided
         fileBasePath ??= $"{_client.GetClientId()}/campaign";
-        
+
         // Define fileKey explicitly as clientId/campaign/filename
         var fileKey = $"{_client.GetClientId()}/campaign/{fileName}";
-        
+
         var data = new
         {
             fileName,
@@ -67,33 +188,75 @@ public class MMSService
             fileBasePath,
             publicFile
         };
-        
+
         try
         {
-            var response = await _httpClient.PostAsJsonAsync(
-                "https://files.cloudcontactai.com/upload/url",
-                data,
-                cancellationToken);
-            
+            var uploadUrl = $"{_client.GetFilesBaseUrl()}/upload/url";
+            var response = await _httpClient.PostAsJsonAsync(uploadUrl, data, cancellationToken);
+
             response.EnsureSuccessStatusCode();
-            
+
             var responseData = await response.Content.ReadFromJsonAsync<SignedUrlResponse>(
                 cancellationToken: cancellationToken);
-            
+
             if (responseData == null || string.IsNullOrEmpty(responseData.SignedS3Url))
             {
                 throw new InvalidOperationException("Invalid response from upload URL API");
             }
-            
+
             // Override the fileKey with our explicitly defined one
             responseData.FileKey = fileKey;
-            
+
             return responseData;
         }
         catch (Exception ex) when (ex is not InvalidOperationException)
         {
             throw new InvalidOperationException($"Failed to get signed upload URL: {ex.Message}", ex);
         }
+    }
+
+    /// <summary>
+    /// Check if a file has already been uploaded to S3
+    /// </summary>
+    /// <param name="fileKey">The S3 file key to check</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>StoredUrlResponse with the stored URL, or empty StoredUrl if not found</returns>
+    public async Task<StoredUrlResponse> CheckFileUploadedAsync(
+        string fileKey,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var endpoint = $"/clients/{_client.GetClientId()}/storedUrl?fileKey={Uri.EscapeDataString(fileKey)}";
+            return await _client.RequestAsync<StoredUrlResponse>(HttpMethod.Get, endpoint, null, cancellationToken);
+        }
+        catch
+        {
+            return new StoredUrlResponse { StoredUrl = string.Empty };
+        }
+    }
+
+    /// <summary>
+    /// Check if a file has already been uploaded to S3 (synchronous version)
+    /// </summary>
+    /// <param name="fileKey">The S3 file key to check</param>
+    /// <returns>StoredUrlResponse with the stored URL, or empty StoredUrl if not found</returns>
+    public StoredUrlResponse CheckFileUploaded(string fileKey)
+    {
+        return CheckFileUploadedAsync(fileKey).GetAwaiter().GetResult();
+    }
+
+    /// <summary>
+    /// Compute the MD5 hash of a file
+    /// </summary>
+    /// <param name="filePath">Path to the file</param>
+    /// <returns>Hex-encoded MD5 hash</returns>
+    private static string ComputeMD5(string filePath)
+    {
+        using var md5 = MD5.Create();
+        using var stream = File.OpenRead(filePath);
+        var hash = md5.ComputeHash(stream);
+        return Convert.ToHexString(hash).ToLowerInvariant();
     }
     
     /// <summary>
@@ -173,6 +336,7 @@ public class MMSService
         IEnumerable<Account> accounts,
         string message,
         string title,
+        string? senderPhone = null,
         SMSOptions? options = null,
         bool forceNewCampaign = true,
         CancellationToken cancellationToken = default)
@@ -214,7 +378,8 @@ public class MMSService
             PictureFileKey = pictureFileKey,
             Accounts = accountsList,
             Message = message,
-            Title = title
+            Title = title,
+            SenderPhone = string.IsNullOrEmpty(senderPhone) ? null : senderPhone
         };
         
         try
@@ -290,6 +455,8 @@ public class MMSService
         string phone,
         string message,
         string title,
+        string? customData = null,
+        string? senderPhone = null,
         SMSOptions? options = null,
         bool forceNewCampaign = true,
         CancellationToken cancellationToken = default)
@@ -298,7 +465,8 @@ public class MMSService
         {
             FirstName = firstName,
             LastName = lastName,
-            Phone = phone
+            Phone = phone,
+            CustomData = customData
         };
         
         return SendAsync(
@@ -306,6 +474,7 @@ public class MMSService
             new[] { account },
             message,
             title,
+            senderPhone,
             options,
             forceNewCampaign,
             cancellationToken);
@@ -331,52 +500,60 @@ public class MMSService
         IEnumerable<Account> accounts,
         string message,
         string title,
+        string? senderPhone = null,
         SMSOptions? options = null,
         bool forceNewCampaign = true,
         CancellationToken cancellationToken = default)
     {
         // Create options if not provided
         options ??= new SMSOptions();
-        
-        // Step 1: Get the file name from the path
-        var fileName = Path.GetFileName(imagePath);
-        
-        // Notify progress if callback provided
-        options.NotifyProgress("Getting signed upload URL");
-        
-        // Step 2: Get a signed URL for uploading
-        var uploadResponse = await GetSignedUploadUrlAsync(
-            fileName,
-            contentType,
-            cancellationToken: cancellationToken);
-        
-        var signedUrl = uploadResponse.SignedS3Url;
-        var fileKey = uploadResponse.FileKey;
-        
-        // Notify progress if callback provided
-        options.NotifyProgress("Uploading image to S3");
-        
-        // Step 3: Upload the image to the signed URL
-        var uploadSuccess = await UploadImageToSignedUrlAsync(
-            signedUrl,
-            imagePath,
-            contentType,
-            cancellationToken);
-        
-        if (!uploadSuccess)
+
+        // Step 1: Compute MD5 and build a deterministic file key
+        var md5Hash = ComputeMD5(imagePath);
+        var extension = Path.GetExtension(imagePath).TrimStart('.');
+        var fileKey = $"{_client.GetClientId()}/campaign/{md5Hash}.{extension}";
+
+        // Step 2: Check if this file was already uploaded (MD5 cache)
+        options.NotifyProgress("Checking if image already uploaded");
+        var stored = await CheckFileUploadedAsync(fileKey, cancellationToken);
+
+        if (string.IsNullOrEmpty(stored.StoredUrl))
         {
-            throw new InvalidOperationException("Failed to upload image to S3");
+            // Step 3: Get a signed URL for uploading
+            options.NotifyProgress("Getting signed upload URL");
+            var fileName = $"{md5Hash}.{extension}";
+            var uploadResponse = await GetSignedUploadUrlAsync(
+                fileName,
+                contentType,
+                cancellationToken: cancellationToken);
+
+            // Step 4: Upload the image to the signed URL
+            options.NotifyProgress("Uploading image to S3");
+            var uploadSuccess = await UploadImageToSignedUrlAsync(
+                uploadResponse.SignedS3Url,
+                imagePath,
+                contentType,
+                cancellationToken);
+
+            if (!uploadSuccess)
+            {
+                throw new InvalidOperationException("Failed to upload image to S3");
+            }
+
+            options.NotifyProgress("Image uploaded successfully, sending MMS");
         }
-        
-        // Notify progress if callback provided
-        options.NotifyProgress("Image uploaded successfully, sending MMS");
-        
-        // Step 4: Send the MMS with the uploaded image
+        else
+        {
+            options.NotifyProgress("Image already uploaded (cache hit), sending MMS");
+        }
+
+        // Step 5: Send the MMS with the uploaded image
         return await SendAsync(
             fileKey,
             accounts,
             message,
             title,
+            senderPhone,
             options,
             forceNewCampaign,
             cancellationToken);
@@ -397,10 +574,11 @@ public class MMSService
         IEnumerable<Account> accounts,
         string message,
         string title,
+        string? senderPhone = null,
         SMSOptions? options = null,
         bool forceNewCampaign = true)
     {
-        return SendAsync(pictureFileKey, accounts, message, title, options, forceNewCampaign)
+        return SendAsync(pictureFileKey, accounts, message, title, senderPhone, options, forceNewCampaign)
             .GetAwaiter()
             .GetResult();
     }
@@ -424,10 +602,12 @@ public class MMSService
         string phone,
         string message,
         string title,
+        string? customData = null,
+        string? senderPhone = null,
         SMSOptions? options = null,
         bool forceNewCampaign = true)
     {
-        return SendSingleAsync(pictureFileKey, firstName, lastName, phone, message, title, options, forceNewCampaign)
+        return SendSingleAsync(pictureFileKey, firstName, lastName, phone, message, title, customData, senderPhone, options, forceNewCampaign)
             .GetAwaiter()
             .GetResult();
     }
@@ -449,10 +629,11 @@ public class MMSService
         IEnumerable<Account> accounts,
         string message,
         string title,
+        string? senderPhone = null,
         SMSOptions? options = null,
         bool forceNewCampaign = true)
     {
-        return SendWithImageAsync(imagePath, contentType, accounts, message, title, options, forceNewCampaign)
+        return SendWithImageAsync(imagePath, contentType, accounts, message, title, senderPhone, options, forceNewCampaign)
             .GetAwaiter()
             .GetResult();
     }

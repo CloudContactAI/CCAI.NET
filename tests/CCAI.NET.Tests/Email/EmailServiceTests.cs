@@ -18,13 +18,13 @@ public class EmailServiceTests
     private readonly Mock<HttpMessageHandler> _mockHttpMessageHandler;
     private readonly HttpClient _httpClient;
     private readonly CCAIClient _client;
-    private readonly EmailService _emailService;
-    
+    private readonly IEmailService _emailService;
+
     public EmailServiceTests()
     {
         _mockHttpMessageHandler = new Mock<HttpMessageHandler>(MockBehavior.Strict);
         _httpClient = new HttpClient(_mockHttpMessageHandler.Object);
-        
+
         _client = new CCAIClient(
             new CCAIConfig
             {
@@ -33,7 +33,7 @@ public class EmailServiceTests
             },
             _httpClient
         );
-        
+
         _emailService = _client.Email;
     }
     
@@ -205,7 +205,7 @@ public class EmailServiceTests
         };
         
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<HttpRequestException>(() =>
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             _emailService.SendCampaignAsync(campaign, options));
         
         Assert.Equal(3, progressMessages.Count);
@@ -233,7 +233,7 @@ public class EmailServiceTests
         var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
             _emailService.SendCampaignAsync(campaign));
         
-        Assert.Equal("At least one account is required (Parameter 'campaign.Accounts')", exception.Message);
+        Assert.Equal("At least one account is required (Parameter 'Accounts')", exception.Message);
     }
     
     [Fact]
@@ -399,6 +399,106 @@ public class EmailServiceTests
         Assert.Equal(1, result.MessagesSent);
     }
     
+    [Fact]
+    public async Task SendCampaignAsync_WithCustomAccountIdAndData_IncludesInPayload()
+    {
+        // Arrange
+        string? capturedBody = null;
+
+        _mockHttpMessageHandler
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>()
+            )
+            .Callback<HttpRequestMessage, CancellationToken>(async (req, _) =>
+                capturedBody = await req.Content!.ReadAsStringAsync())
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content = new StringContent(JsonSerializer.Serialize(new EmailResponse { Id = "1", Status = "ok" }))
+            });
+
+        var campaign = new EmailCampaign
+        {
+            Subject = "Test",
+            Title = "Test",
+            Message = "<p>Test</p>",
+            SenderEmail = "sender@test.com",
+            ReplyEmail = "reply@test.com",
+            SenderName = "Sender",
+            Accounts = new List<EmailAccount>
+            {
+                new EmailAccount
+                {
+                    FirstName = "John",
+                    LastName = "Doe",
+                    Email = "john@example.com",
+                    CustomAccountId = "ext-id-123",
+                    Data = new Dictionary<string, string> { { "tier", "gold" }, { "locale", "en-US" } }
+                }
+            }
+        };
+
+        // Act
+        await _emailService.SendCampaignAsync(campaign);
+
+        // Assert: verify JSON contains customAccountId and data keys
+        Assert.NotNull(capturedBody);
+        Assert.Contains("\"customAccountId\":\"ext-id-123\"", capturedBody);
+        Assert.Contains("\"data\"", capturedBody);
+        Assert.Contains("\"tier\":\"gold\"", capturedBody);
+        Assert.Contains("\"locale\":\"en-US\"", capturedBody);
+    }
+
+    [Fact]
+    public async Task SendCampaignAsync_ReturnsMessageAndResponseId()
+    {
+        // Arrange
+        var responseContent = new EmailResponse
+        {
+            Id = "campaign-123",
+            Status = "success",
+            Message = "Email campaign sent successfully",
+            ResponseId = "resp-xyz-456"
+        };
+
+        _mockHttpMessageHandler
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>()
+            )
+            .ReturnsAsync(new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content = new StringContent(JsonSerializer.Serialize(responseContent))
+            });
+
+        var campaign = new EmailCampaign
+        {
+            Subject = "Test",
+            Title = "Test",
+            Message = "<p>Test</p>",
+            SenderEmail = "s@test.com",
+            ReplyEmail = "r@test.com",
+            SenderName = "Sender",
+            Accounts = new List<EmailAccount>
+            {
+                new EmailAccount { FirstName = "John", LastName = "Doe", Email = "j@test.com" }
+            }
+        };
+
+        // Act
+        var result = await _emailService.SendCampaignAsync(campaign);
+
+        // Assert
+        Assert.Equal("Email campaign sent successfully", result.Message);
+        Assert.Equal("resp-xyz-456", result.ResponseId);
+    }
+
     [Fact]
     public async Task SendAsync_WithEmailRequestProgressTracking_CallsProgressCallback()
     {

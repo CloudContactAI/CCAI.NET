@@ -35,7 +35,18 @@ public record Account
     public string? CustomAccountId { get; init; } = null;
     
     /// <summary>
-    /// Custom data for this recipient
+    /// Additional key-value pairs for variable substitution in message templates.
+    /// Define any keys you want and use them as ${key} in your message.
+    /// Example: Data = new Dictionary&lt;string, string&gt; { { "city", "Miami" } }
+    /// message: "Hello ${firstName}, greetings from ${city}!"
+    /// </summary>
+    [JsonPropertyName("data")]
+    public Dictionary<string, string>? Data { get; init; } = null;
+
+    /// <summary>
+    /// Arbitrary string payload forwarded as-is to your webhook handler.
+    /// Not used in the message body. Sent to the API as "messageData".
+    /// Example: "{\"orderId\":\"ORD-123\",\"source\":\"checkout\"}"
     /// </summary>
     [JsonPropertyName("messageData")]
     public string? CustomData { get; init; } = null;

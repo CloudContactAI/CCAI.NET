@@ -4,17 +4,83 @@
 namespace CCAI.NET.Email;
 
 /// <summary>
+/// Interface for email service for sending campaigns through the CCAI API
+/// </summary>
+public interface IEmailService
+{
+    /// <summary>
+    /// Send an email using a request object
+    /// </summary>
+    Task<EmailResponse> SendAsync(EmailRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Send an email campaign to one or more recipients
+    /// </summary>
+    Task<EmailResponse> SendCampaignAsync(
+        EmailCampaign campaign,
+        EmailOptions? options = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Send a single email to one recipient
+    /// </summary>
+    Task<EmailResponse> SendSingleAsync(
+        string firstName,
+        string lastName,
+        string email,
+        string subject,
+        string message,
+        string? textContent = null,
+        string senderEmail = "noreply@cloudcontactai.com",
+        string replyEmail = "noreply@cloudcontactai.com",
+        string senderName = "CloudContactAI",
+        string? title = null,
+        string? customAccountId = null,
+        EmailOptions? options = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Send an email using a request object (synchronous version)
+    /// </summary>
+    EmailResponse Send(EmailRequest request);
+
+    /// <summary>
+    /// Send an email campaign to one or more recipients (synchronous version)
+    /// </summary>
+    EmailResponse SendCampaign(
+        EmailCampaign campaign,
+        EmailOptions? options = null);
+
+    /// <summary>
+    /// Send a single email to one recipient (synchronous version)
+    /// </summary>
+    EmailResponse SendSingle(
+        string firstName,
+        string lastName,
+        string email,
+        string subject,
+        string message,
+        string? textContent = null,
+        string senderEmail = "noreply@cloudcontactai.com",
+        string replyEmail = "noreply@cloudcontactai.com",
+        string senderName = "CloudContactAI",
+        string? title = null,
+        string? customAccountId = null,
+        EmailOptions? options = null);
+}
+
+/// <summary>
 /// Email service for sending campaigns through the CCAI API
 /// </summary>
-public class EmailService
+public class EmailService : IEmailService
 {
-    private readonly CCAIClient _client;
-    
+    private readonly ICCAIClient _client;
+
     /// <summary>
     /// Create a new Email service instance
     /// </summary>
     /// <param name="client">The parent CCAI client</param>
-    public EmailService(CCAIClient client)
+    public EmailService(ICCAIClient client)
     {
         _client = client;
     }
@@ -208,10 +274,11 @@ public class EmailService
         string email,
         string subject,
         string message,
-        string senderEmail,
-        string replyEmail,
-        string senderName,
-        string title,
+        string? textContent = null,
+        string senderEmail = "noreply@cloudcontactai.com",
+        string replyEmail = "noreply@cloudcontactai.com",
+        string senderName = "CloudContactAI",
+        string? title = null,
         string? customAccountId = null,
         EmailOptions? options = null,
         CancellationToken cancellationToken = default)
@@ -227,8 +294,9 @@ public class EmailService
         var campaign = new EmailCampaign
         {
             Subject = subject,
-            Title = title,
+            Title = title ?? subject,
             Message = message,
+            TextContent = textContent,
             SenderEmail = senderEmail,
             ReplyEmail = replyEmail,
             SenderName = senderName,
@@ -287,14 +355,15 @@ public class EmailService
         string email,
         string subject,
         string message,
-        string senderEmail,
-        string replyEmail,
-        string senderName,
-        string title,
+        string? textContent = null,
+        string senderEmail = "noreply@cloudcontactai.com",
+        string replyEmail = "noreply@cloudcontactai.com",
+        string senderName = "CloudContactAI",
+        string? title = null,
         string? customAccountId = null,
         EmailOptions? options = null)
     {
-        return SendSingleAsync(firstName, lastName, email, subject, message, senderEmail, replyEmail, senderName, title, customAccountId, options)
+        return SendSingleAsync(firstName, lastName, email, subject, message, textContent, senderEmail, replyEmail, senderName, title, customAccountId, options)
             .GetAwaiter()
             .GetResult();
     }

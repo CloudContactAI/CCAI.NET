@@ -37,7 +37,13 @@ public record EmailAccount
     /// <summary>
     /// Custom ID provided for this recipient. This can be used to link this account to an external system
     /// </summary>
-    [JsonPropertyName("clientExternalId")]
+    [JsonPropertyName("customAccountId")]
     public string? CustomAccountId { get; init; } = null;
 
+    /// <summary>
+    /// Additional key-value pairs for variable substitution in email templates.
+    /// Define any keys you want and use them as ${key} in your message.
+    /// </summary>
+    [JsonPropertyName("data")]
+    public Dictionary<string, string>? Data { get; init; } = null;
 }

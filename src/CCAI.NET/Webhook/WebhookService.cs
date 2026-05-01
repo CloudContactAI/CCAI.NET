@@ -9,21 +9,90 @@ using System.Text.Json.Serialization;
 namespace CCAI.NET.Webhook;
 
 /// <summary>
+/// Interface for service managing CloudContactAI webhooks
+/// </summary>
+public interface IWebhookService
+{
+    /// <summary>
+    /// Register a new webhook endpoint
+    /// </summary>
+    Task<WebhookRegistrationResponse> RegisterAsync(
+        WebhookConfig config,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Update an existing webhook configuration
+    /// </summary>
+    Task<WebhookRegistrationResponse> UpdateAsync(
+        int id,
+        WebhookConfig config,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// List all registered webhooks
+    /// </summary>
+    Task<IList<WebhookRegistrationResponse>> ListAsync(
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Delete a webhook
+    /// </summary>
+    Task<WebhookDeleteResponse> DeleteAsync(
+        int id,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Verify a webhook signature using HMAC-SHA256 with constant-time comparison
+    /// </summary>
+    bool VerifySignature(string signature, string clientId, string eventHash, string secret);
+
+    /// <summary>
+    /// Parse CloudContact webhook event from JSON
+    /// </summary>
+    CloudContactWebhookEvent ParseCloudContactEvent(string json);
+
+    /// <summary>
+    /// Parse webhook event from JSON (legacy format support)
+    /// </summary>
+    WebhookEventBase ParseEvent(string json);
+
+    /// <summary>
+    /// Register a new webhook endpoint (synchronous version)
+    /// </summary>
+    WebhookRegistrationResponse Register(WebhookConfig config);
+
+    /// <summary>
+    /// Update an existing webhook configuration (synchronous version)
+    /// </summary>
+    WebhookRegistrationResponse Update(int id, WebhookConfig config);
+
+    /// <summary>
+    /// List all registered webhooks (synchronous version)
+    /// </summary>
+    IList<WebhookRegistrationResponse> List();
+
+    /// <summary>
+    /// Delete a webhook (synchronous version)
+    /// </summary>
+    WebhookDeleteResponse Delete(int id);
+}
+
+/// <summary>
 /// Service for managing CloudContactAI webhooks
 /// </summary>
-public class WebhookService
+public class WebhookService : IWebhookService
 {
-    private readonly CCAIClient _client;
-    
+    private readonly ICCAIClient _client;
+
     /// <summary>
     /// Create a new Webhook service instance
     /// </summary>
     /// <param name="client">The parent CCAI client</param>
-    public WebhookService(CCAIClient client)
+    public WebhookService(ICCAIClient client)
     {
         _client = client;
     }
-    
+
     /// <summary>
     /// Register a new webhook endpoint
     /// </summary>
@@ -38,19 +107,26 @@ public class WebhookService
         {
             throw new ArgumentException("URL is required", nameof(config.Url));
         }
-        
-        if (config.Events == null || config.Events.Count == 0)
+
+        var payload = new[]
         {
-            throw new ArgumentException("At least one event type is required", nameof(config.Events));
-        }
-        
-        return await _client.RequestAsync<WebhookRegistrationResponse>(
-            HttpMethod.Post,
-            "/webhooks",
-            config,
-            cancellationToken);
+            new
+            {
+                url             = config.Url,
+                method          = "POST",
+                integrationType = config.IntegrationType ?? "ALL",
+                secretKey       = config.Secret
+            }
+        };
+
+        var endpoint = $"/v1/client/{_client.GetClientId()}/integration";
+        var responses = await _client.RequestAsync<List<WebhookRegistrationResponse>>(
+            HttpMethod.Post, endpoint, payload, cancellationToken);
+
+        return responses.FirstOrDefault()
+            ?? throw new InvalidOperationException("Empty response from register webhook");
     }
-    
+
     /// <summary>
     /// Update an existing webhook configuration
     /// </summary>
@@ -59,22 +135,35 @@ public class WebhookService
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Updated webhook details</returns>
     public async Task<WebhookRegistrationResponse> UpdateAsync(
-        string id,
+        int id,
         WebhookConfig config,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrEmpty(id))
+        if (id <= 0)
         {
             throw new ArgumentException("Webhook ID is required", nameof(id));
         }
-        
-        return await _client.RequestAsync<WebhookRegistrationResponse>(
-            HttpMethod.Put,
-            $"/webhooks/{id}",
-            config,
-            cancellationToken);
+
+        var payload = new[]
+        {
+            new
+            {
+                id              = id,
+                url             = config.Url,
+                method          = "POST",
+                integrationType = config.IntegrationType ?? "ALL",
+                secretKey       = config.Secret
+            }
+        };
+
+        var endpoint = $"/v1/client/{_client.GetClientId()}/integration";
+        var responses = await _client.RequestAsync<List<WebhookRegistrationResponse>>(
+            HttpMethod.Post, endpoint, payload, cancellationToken);
+
+        return responses.FirstOrDefault()
+            ?? throw new InvalidOperationException("Empty response from update webhook");
     }
-    
+
     /// <summary>
     /// List all registered webhooks
     /// </summary>
@@ -83,13 +172,11 @@ public class WebhookService
     public async Task<IList<WebhookRegistrationResponse>> ListAsync(
         CancellationToken cancellationToken = default)
     {
+        var endpoint = $"/v1/client/{_client.GetClientId()}/integration";
         return await _client.RequestAsync<List<WebhookRegistrationResponse>>(
-            HttpMethod.Get,
-            "/webhooks",
-            null,
-            cancellationToken);
+            HttpMethod.Get, endpoint, null, cancellationToken);
     }
-    
+
     /// <summary>
     /// Delete a webhook
     /// </summary>
@@ -97,40 +184,73 @@ public class WebhookService
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Success message</returns>
     public async Task<WebhookDeleteResponse> DeleteAsync(
-        string id,
+        int id,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrEmpty(id))
+        if (id <= 0)
         {
             throw new ArgumentException("Webhook ID is required", nameof(id));
         }
-        
+
+        var endpoint = $"/v1/client/{_client.GetClientId()}/integration/{id}";
         return await _client.RequestAsync<WebhookDeleteResponse>(
-            HttpMethod.Delete,
-            $"/webhooks/{id}",
-            null,
-            cancellationToken);
+            HttpMethod.Delete, endpoint, null, cancellationToken);
     }
-    
+
     /// <summary>
-    /// Verify a webhook signature
+    /// Verify a webhook signature using HMAC-SHA256 with constant-time comparison
     /// </summary>
-    /// <param name="signature">Signature from the X-CCAI-Signature header</param>
-    /// <param name="body">Raw request body</param>
+    /// <param name="signature">Signature from webhook (Base64 encoded)</param>
+    /// <param name="clientId">Client ID from webhook</param>
+    /// <param name="eventHash">Event hash from webhook</param>
     /// <param name="secret">Webhook secret</param>
     /// <returns>Boolean indicating if the signature is valid</returns>
-    public bool VerifySignature(string signature, string body, string secret)
+    public bool VerifySignature(string signature, string clientId, string eventHash, string secret)
     {
-        if (string.IsNullOrEmpty(signature) || string.IsNullOrEmpty(body) || string.IsNullOrEmpty(secret))
+        if (string.IsNullOrEmpty(signature) || string.IsNullOrEmpty(clientId) ||
+            string.IsNullOrEmpty(eventHash) || string.IsNullOrEmpty(secret))
         {
             return false;
         }
-        
+
+        try
+        {
+            var expectedSignature = GenerateSignature(secret, clientId, eventHash);
+            return ConstantTimeEquals(signature, expectedSignature);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Generate the expected signature for a webhook event
+    /// </summary>
+    /// <param name="secret">Webhook secret</param>
+    /// <param name="clientId">Client ID</param>
+    /// <param name="eventHash">Event hash</param>
+    /// <returns>Base64-encoded signature</returns>
+    private string GenerateSignature(string secret, string clientId, string eventHash)
+    {
+        var data = $"{clientId}:{eventHash}";
         using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
-        var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(body));
-        var computedSignature = BitConverter.ToString(hash).Replace("-", "").ToLower();
-        
-        return signature == computedSignature;
+        var signatureBytes = hmac.ComputeHash(Encoding.UTF8.GetBytes(data));
+        return Convert.ToBase64String(signatureBytes);
+    }
+
+    /// <summary>
+    /// Constant-time string comparison to prevent timing attacks
+    /// </summary>
+    private bool ConstantTimeEquals(string a, string b)
+    {
+        if (a.Length != b.Length) return false;
+        var result = 0;
+        for (int i = 0; i < a.Length; i++)
+        {
+            result |= a[i] ^ b[i];
+        }
+        return result == 0;
     }
     
     /// <summary>
@@ -260,7 +380,7 @@ public class WebhookService
     /// <param name="id">Webhook ID</param>
     /// <param name="config">Updated webhook configuration</param>
     /// <returns>Updated webhook details</returns>
-    public WebhookRegistrationResponse Update(string id, WebhookConfig config)
+    public WebhookRegistrationResponse Update(int id, WebhookConfig config)
     {
         return UpdateAsync(id, config).GetAwaiter().GetResult();
     }
@@ -279,7 +399,7 @@ public class WebhookService
     /// </summary>
     /// <param name="id">Webhook ID</param>
     /// <returns>Success message</returns>
-    public WebhookDeleteResponse Delete(string id)
+    public WebhookDeleteResponse Delete(int id)
     {
         return DeleteAsync(id).GetAwaiter().GetResult();
     }
@@ -294,19 +414,31 @@ public record WebhookRegistrationResponse
     /// Webhook ID
     /// </summary>
     [JsonPropertyName("id")]
-    public string Id { get; init; } = string.Empty;
-    
+    public int Id { get; init; }
+
     /// <summary>
     /// Webhook URL
     /// </summary>
     [JsonPropertyName("url")]
     public string Url { get; init; } = string.Empty;
-    
+
     /// <summary>
-    /// Subscribed events
+    /// HTTP method (always POST)
     /// </summary>
-    [JsonPropertyName("events")]
-    public IList<WebhookEventType> Events { get; init; } = new List<WebhookEventType>();
+    [JsonPropertyName("method")]
+    public string Method { get; init; } = "POST";
+
+    /// <summary>
+    /// Integration type filter (e.g. "DEFAULT", "SMS", "EMAIL")
+    /// </summary>
+    [JsonPropertyName("integrationType")]
+    public string IntegrationType { get; init; } = "DEFAULT";
+
+    /// <summary>
+    /// Secret key used for signature verification
+    /// </summary>
+    [JsonPropertyName("secretKey")]
+    public string? SecretKey { get; init; }
 }
 
 /// <summary>

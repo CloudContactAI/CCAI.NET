@@ -303,3 +303,9 @@ $RECYCLE.BIN/
 
 # Environment variables
 .env
+
+# Real API tests — local only
+tests/CCAI.NET.IntegrationTests/
+test_real_webhook.cs
+test-real-webhook/
+CCAI.NET.IntegrationTests

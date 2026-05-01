@@ -67,7 +67,7 @@ public class MMSExample
                 new[] { account },
                 message,
                 title,
-                options);
+                options: options);
             
             Console.WriteLine($"MMS sent! Campaign ID: {response.CampaignId}");
             Console.WriteLine($"Messages sent: {response.MessagesSent}");

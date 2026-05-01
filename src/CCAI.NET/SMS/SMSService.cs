@@ -4,17 +4,85 @@
 namespace CCAI.NET.SMS;
 
 /// <summary>
+/// Interface for SMS service for sending messages through the CCAI API
+/// </summary>
+public interface ISMSService
+{
+    /// <summary>
+    /// Send an SMS message using a request object
+    /// </summary>
+    Task<SMSResponse> SendAsync(SMSRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Send an SMS message to one or more recipients
+    /// </summary>
+    Task<SMSResponse> SendAsync(
+        IEnumerable<Account> accounts,
+        string message,
+        string title,
+        string? customData = null,
+        SMSOptions? options = null,
+        string? senderPhone = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Send a single SMS message to one recipient
+    /// </summary>
+    Task<SMSResponse> SendSingleAsync(
+        string firstName,
+        string lastName,
+        string phone,
+        string message,
+        string title,
+        string? customAccountId = null,
+        string? customData = null,
+        SMSOptions? options = null,
+        string? senderPhone = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Send an SMS message using a request object (synchronous version)
+    /// </summary>
+    SMSResponse Send(SMSRequest request);
+
+    /// <summary>
+    /// Send an SMS message to one or more recipients (synchronous version)
+    /// </summary>
+    SMSResponse Send(
+        IEnumerable<Account> accounts,
+        string message,
+        string title,
+        string? customData = null,
+        SMSOptions? options = null,
+        string? senderPhone = null);
+
+    /// <summary>
+    /// Send a single SMS message to one recipient (synchronous version)
+    /// </summary>
+    SMSResponse SendSingle(
+        string firstName,
+        string lastName,
+        string phone,
+        string message,
+        string title,
+        string? customAccountId = null,
+        string? customData = null,
+        SMSOptions? options = null,
+        string? senderPhone = null);
+}
+
+/// <summary>
 /// SMS service for sending messages through the CCAI API
 /// </summary>
-public class SMSService
+public class SMSService : ISMSService
 {
-    private readonly CCAIClient _client;
-    
+    private readonly ICCAIClient _client;
+
     /// <summary>
     /// Create a new SMS service instance
     /// </summary>
     /// <param name="client">The parent CCAI client</param>
-    public SMSService(CCAIClient client)
+    public SMSService(ICCAIClient client)
     {
         _client = client;
     }

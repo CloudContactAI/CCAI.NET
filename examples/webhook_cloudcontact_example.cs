@@ -124,7 +124,7 @@ public class CloudContactWebhookExample
         ProcessWebhookEvent(webhookService, cloudContactErrorJson);
     }
     
-    static void ProcessWebhookEvent(WebhookService webhookService, string json)
+    static void ProcessWebhookEvent(IWebhookService webhookService, string json)
     {
         try
         {
