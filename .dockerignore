@@ -1,0 +1,11 @@
+.git
+.github
+*.md
+LICENSE
+examples/
+tests/
+test-email-sender/
+**/bin/
+**/obj/
+.env
+.env.*
