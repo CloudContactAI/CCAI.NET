@@ -7,6 +7,8 @@ A C# client library for interacting with the [CloudContactAI](https://cloudconta
 - Send SMS messages to single or multiple recipients
 - Send MMS messages with images (automatic S3 upload)
 - Send Email campaigns to single or multiple recipients
+- Brand registration and management for TCR verification
+- Campaign registration and management for TCR carrier vetting
 - Manage contact opt-out preferences (SetDoNotText)
 - Webhook management: register, list, update, delete
 - Webhook signature verification
@@ -451,6 +453,139 @@ else
     Console.WriteLine("Invalid signature");
 }
 ```
+
+### Brand Registration
+
+Register and manage brands for TCR (The Campaign Registry) business verification.
+
+```csharp
+using CCAI.NET;
+using CCAI.NET.Brands;
+
+var ccai = new CCAIClient(new CCAIConfig
+{
+    ClientId = "YOUR-CLIENT-ID",
+    ApiKey = "YOUR-API-KEY"
+});
+
+// Create a brand
+var brand = await ccai.Brands.CreateAsync(new BrandRequest
+{
+    LegalCompanyName = "Collect.org Inc.",
+    Dba = "Collect",
+    EntityType = "NON_PROFIT",
+    TaxId = "123456789",
+    TaxIdCountry = "US",
+    Country = "US",
+    VerticalType = "NON_PROFIT",
+    WebsiteUrl = "https://www.collect.org",
+    Street = "123 Main Street",
+    City = "San Francisco",
+    State = "CA",
+    PostalCode = "94105",
+    ContactFirstName = "Jane",
+    ContactLastName = "Doe",
+    ContactEmail = "jane@collect.org",
+    ContactPhone = "+14155551234"
+});
+Console.WriteLine($"Brand created with ID: {brand.Id}");
+
+// Get a brand by ID
+var fetched = await ccai.Brands.GetAsync(brand.Id);
+Console.WriteLine($"Website match score: {fetched.WebsiteMatchScore?.ToString() ?? "pending"}");
+
+// List all brands for the account
+var brands = await ccai.Brands.ListAsync();
+Console.WriteLine($"Found {brands.Length} brand(s)");
+
+// Update a brand (partial update)
+var updated = await ccai.Brands.UpdateAsync(brand.Id, new BrandRequest
+{
+    Street = "456 Oak Avenue",
+    City = "Los Angeles"
+});
+
+// Delete a brand
+await ccai.Brands.DeleteAsync(brand.Id);
+```
+
+#### Entity Types
+
+`PRIVATE_PROFIT`, `PUBLIC_PROFIT`, `NON_PROFIT`, `GOVERNMENT`, `SOLE_PROPRIETOR`
+
+> Note: `PUBLIC_PROFIT` entities require `StockSymbol` and `StockExchange` fields.
+
+#### Vertical Types
+
+`AUTOMOTIVE`, `AGRICULTURE`, `BANKING`, `COMMUNICATION`, `CONSTRUCTION`, `EDUCATION`, `ENERGY`, `ENTERTAINMENT`, `GOVERNMENT`, `HEALTHCARE`, `HOSPITALITY`, `INSURANCE`, `LEGAL`, `MANUFACTURING`, `NON_PROFIT`, `PROFESSIONAL`, `REAL_ESTATE`, `RETAIL`, `TECHNOLOGY`, `TRANSPORTATION`
+
+### Campaign Registration
+
+Register and manage campaigns for TCR (The Campaign Registry) carrier vetting. Each campaign must be linked to a verified brand.
+
+```csharp
+using CCAI.NET;
+using CCAI.NET.Campaigns;
+
+var ccai = new CCAIClient(new CCAIConfig
+{
+    ClientId = "YOUR-CLIENT-ID",
+    ApiKey = "YOUR-API-KEY"
+});
+
+// Create a campaign
+var campaign = await ccai.Campaigns.CreateAsync(new CampaignRequest
+{
+    BrandId = 1,
+    UseCase = "MIXED",
+    SubUseCases = new List<string> { "CUSTOMER_CARE", "TWO_FACTOR_AUTHENTICATION", "ACCOUNT_NOTIFICATION" },
+    Description = "Security codes and support messaging.",
+    MessageFlow = "Users opt-in via signup form at https://example.com/signup",
+    HasEmbeddedLinks = true,
+    HasEmbeddedPhone = false,
+    IsAgeGated = false,
+    IsDirectLending = false,
+    OptInKeywords = new List<string> { "START" },
+    OptInMessage = "Welcome! Reply STOP to cancel.",
+    OptInProofUrl = "https://example.com/opt-in-proof.png",
+    HelpKeywords = new List<string> { "HELP" },
+    HelpMessage = "For HELP email support@example.com.",
+    OptOutKeywords = new List<string> { "STOP" },
+    OptOutMessage = "STOP received. You are unsubscribed.",
+    SampleMessages = new List<string>
+    {
+        "Your code is 554321. Reply STOP to cancel.",
+        "Your ticket has been updated. Reply HELP for info."
+    }
+});
+Console.WriteLine($"Campaign created with ID: {campaign.Id}");
+
+// Get a campaign by ID
+var fetched = await ccai.Campaigns.GetAsync(campaign.Id);
+
+// List all campaigns for the account
+var campaigns = await ccai.Campaigns.ListAsync();
+Console.WriteLine($"Found {campaigns.Length} campaign(s)");
+
+// Update a campaign (partial update)
+var updated = await ccai.Campaigns.UpdateAsync(campaign.Id, new CampaignRequest
+{
+    Description = "Updated description."
+});
+
+// Delete a campaign
+await ccai.Campaigns.DeleteAsync(campaign.Id);
+```
+
+#### Use Cases
+
+`TWO_FACTOR_AUTHENTICATION`, `ACCOUNT_NOTIFICATION`, `CUSTOMER_CARE`, `DELIVERY_NOTIFICATION`, `FRAUD_ALERT`, `HIGHER_EDUCATION`, `LOW_VOLUME_MIXED`, `MARKETING`, `MIXED`, `POLLING_VOTING`, `PUBLIC_SERVICE_ANNOUNCEMENT`, `SECURITY_ALERT`
+
+> Note: `MIXED` and `LOW_VOLUME_MIXED` campaigns require 2–3 `SubUseCases`.
+
+#### Sub-Use Cases
+
+`TWO_FACTOR_AUTHENTICATION`, `ACCOUNT_NOTIFICATION`, `CUSTOMER_CARE`, `DELIVERY_NOTIFICATION`, `FRAUD_ALERT`, `MARKETING`, `POLLING_VOTING`
 
 ### Step-by-Step MMS Workflow
 
