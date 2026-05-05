@@ -309,3 +309,5 @@ tests/CCAI.NET.IntegrationTests/
 test_real_webhook.cs
 test-real-webhook/
 CCAI.NET.IntegrationTests
+
+.claude/

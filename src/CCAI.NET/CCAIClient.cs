@@ -6,6 +6,8 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using CCAI.NET.Brands;
+using CCAI.NET.Campaigns;
 using CCAI.NET.Contact;
 using CCAI.NET.Email;
 using CCAI.NET.SMS;
@@ -49,6 +51,16 @@ public interface ICCAIClient : IDisposable
     IContactService Contact { get; }
 
     /// <summary>
+    /// Brand service for managing brand registrations
+    /// </summary>
+    BrandService Brands { get; }
+
+    /// <summary>
+    /// Campaign service for managing 10DLC campaign registrations
+    /// </summary>
+    CampaignService Campaigns { get; }
+
+    /// <summary>
     /// Get the client ID
     /// </summary>
     string GetClientId();
@@ -79,6 +91,11 @@ public interface ICCAIClient : IDisposable
     string GetFilesBaseUrl();
 
     /// <summary>
+    /// Get the compliance base URL
+    /// </summary>
+    string GetComplianceBaseUrl();
+
+    /// <summary>
     /// Make an authenticated API request to the CCAI API
     /// </summary>
     Task<TResponse> RequestAsync<TResponse>(
@@ -92,6 +109,17 @@ public interface ICCAIClient : IDisposable
     /// Make an authenticated API request to a custom API endpoint
     /// </summary>
     Task<TResponse> CustomRequestAsync<TResponse>(
+        HttpMethod method,
+        string endpoint,
+        object? data = null,
+        string? baseUrl = null,
+        CancellationToken cancellationToken = default,
+        Dictionary<string, string>? headers = null);
+
+    /// <summary>
+    /// Make an authenticated API request to a custom API endpoint without expecting a JSON response
+    /// </summary>
+    Task CustomRequestWithoutResponseAsync(
         HttpMethod method,
         string endpoint,
         object? data = null,
@@ -144,6 +172,11 @@ public record CCAIConfig
     /// Base URL for the Files API
     /// </summary>
     public string FilesBaseUrl { get; init; } = Environment.GetEnvironmentVariable("CCAI_FILES_BASE_URL") ?? "https://files.cloudcontactai.com";
+
+    /// <summary>
+    /// Base URL for the Compliance API
+    /// </summary>
+    public string ComplianceBaseUrl { get; init; } = Environment.GetEnvironmentVariable("CCAI_COMPLIANCE_BASE_URL") ?? "https://compliance.cloudcontactai.com/api";
     
     /// <summary>
     /// Whether to use test environment URLs
@@ -189,6 +222,16 @@ public record CCAIConfig
             ? Environment.GetEnvironmentVariable("CCAI_TEST_FILES_BASE_URL") ?? "https://files-test-cloudcontactai.allcode.com"
             : FilesBaseUrl;
     }
+
+    /// <summary>
+    /// Get the appropriate compliance base URL based on environment
+    /// </summary>
+    public string GetComplianceBaseUrl()
+    {
+        return UseTestEnvironment
+            ? Environment.GetEnvironmentVariable("CCAI_TEST_COMPLIANCE_BASE_URL") ?? "https://compliance-test-cloudcontactai.allcode.com/api"
+            : ComplianceBaseUrl;
+    }
 }
 
 /// <summary>
@@ -230,6 +273,16 @@ public class CCAIClient : ICCAIClient
     /// Contact service for managing contact preferences
     /// </summary>
     public IContactService Contact { get; }
+
+    /// <summary>
+    /// Brand service for managing brand registrations
+    /// </summary>
+    public BrandService Brands { get; }
+
+    /// <summary>
+    /// Campaign service for managing 10DLC campaign registrations
+    /// </summary>
+    public CampaignService Campaigns { get; }
 
     /// <summary>
     /// Create a new CCAI client instance
@@ -278,31 +331,38 @@ public class CCAIClient : ICCAIClient
         Webhook = new WebhookService(this);
         Phone = new PhoneService(this);
         Contact = new ContactService(this);
+        Brands = new BrandService(this);
+        Campaigns = new CampaignService(this);
     }
 
     /// <summary>
     /// Get the client ID
     /// </summary>
+    /// <returns>Client ID</returns>
     public string GetClientId() => _config.ClientId;
 
     /// <summary>
     /// Get the API key
     /// </summary>
+    /// <returns>API key</returns>
     public string GetApiKey() => _config.ApiKey;
 
     /// <summary>
     /// Get the base URL
     /// </summary>
+    /// <returns>Base URL</returns>
     public string GetBaseUrl() => _config.GetBaseUrl();
-
+    
     /// <summary>
     /// Get the email base URL
     /// </summary>
+    /// <returns>Email base URL</returns>
     public string GetEmailBaseUrl() => _config.GetEmailBaseUrl();
-
+    
     /// <summary>
     /// Get the auth base URL
     /// </summary>
+    /// <returns>Auth base URL</returns>
     public string GetAuthBaseUrl() => _config.GetAuthBaseUrl();
 
     /// <summary>
@@ -311,8 +371,21 @@ public class CCAIClient : ICCAIClient
     public string GetFilesBaseUrl() => _config.GetFilesBaseUrl();
 
     /// <summary>
+    /// Get the compliance base URL
+    /// </summary>
+    public string GetComplianceBaseUrl() => _config.GetComplianceBaseUrl();
+
+    /// <summary>
     /// Make an authenticated API request to the CCAI API
     /// </summary>
+    /// <param name="method">HTTP method</param>
+    /// <param name="endpoint">API endpoint</param>
+    /// <param name="data">Request data</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <param name="headers">Additional headers</param>
+    /// <typeparam name="TResponse">Response type</typeparam>
+    /// <returns>API response</returns>
+    /// <exception cref="HttpRequestException">If the API returns an error</exception>
     public async Task<TResponse> RequestAsync<TResponse>(
         HttpMethod method,
         string endpoint,
@@ -326,6 +399,15 @@ public class CCAIClient : ICCAIClient
     /// <summary>
     /// Make an authenticated API request to a custom API endpoint
     /// </summary>
+    /// <param name="method">HTTP method</param>
+    /// <param name="endpoint">API endpoint</param>
+    /// <param name="data">Request data</param>
+    /// <param name="baseUrl">Custom base URL for the API</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <param name="headers">Additional headers</param>
+    /// <typeparam name="TResponse">Response type</typeparam>
+    /// <returns>API response</returns>
+    /// <exception cref="HttpRequestException">If the API returns an error</exception>
     public async Task<TResponse> CustomRequestAsync<TResponse>(
         HttpMethod method,
         string endpoint,
@@ -335,15 +417,15 @@ public class CCAIClient : ICCAIClient
         Dictionary<string, string>? headers = null)
     {
         var url = $"{baseUrl ?? _config.GetBaseUrl()}{endpoint}";
-
+        
         using var request = new HttpRequestMessage(method, url);
-
+        
         if (data != null)
         {
             var json = JsonSerializer.Serialize(data, _jsonOptions);
             request.Content = new StringContent(json, Encoding.UTF8, "application/json");
         }
-
+        
         // Add additional headers if provided
         if (headers != null)
         {
@@ -352,20 +434,20 @@ public class CCAIClient : ICCAIClient
                 request.Headers.Add(key, value);
             }
         }
-
+        
         using var response = await _httpClient.SendAsync(request, cancellationToken);
-
+        
         // Throw an exception for HTTP errors
         response.EnsureSuccessStatusCode();
-
+        
         // Parse the response as JSON
         var result = await response.Content.ReadFromJsonAsync<TResponse>(_jsonOptions, cancellationToken);
-
+        
         if (result == null)
         {
             throw new InvalidOperationException("Failed to deserialize response");
         }
-
+        
         return result;
     }
 
@@ -405,16 +487,37 @@ public class CCAIClient : ICCAIClient
         CancellationToken cancellationToken = default,
         Dictionary<string, string>? headers = null)
     {
-        var url = $"{_config.GetBaseUrl()}{endpoint}";
-        
+        await CustomRequestWithoutResponseAsync(method, endpoint, data, _config.GetBaseUrl(), cancellationToken, headers);
+    }
+
+    /// <summary>
+    /// Make an authenticated API request to a custom API endpoint without expecting a JSON response
+    /// </summary>
+    /// <param name="method">HTTP method</param>
+    /// <param name="endpoint">API endpoint</param>
+    /// <param name="data">Request data</param>
+    /// <param name="baseUrl">Custom base URL for the API</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <param name="headers">Additional headers</param>
+    /// <exception cref="HttpRequestException">If the API returns an error</exception>
+    public async Task CustomRequestWithoutResponseAsync(
+        HttpMethod method,
+        string endpoint,
+        object? data = null,
+        string? baseUrl = null,
+        CancellationToken cancellationToken = default,
+        Dictionary<string, string>? headers = null)
+    {
+        var url = $"{baseUrl ?? _config.GetBaseUrl()}{endpoint}";
+
         using var request = new HttpRequestMessage(method, url);
-        
+
         if (data != null)
         {
             var json = JsonSerializer.Serialize(data, _jsonOptions);
             request.Content = new StringContent(json, Encoding.UTF8, "application/json");
         }
-        
+
         if (headers != null)
         {
             foreach (var (key, value) in headers)
@@ -422,7 +525,7 @@ public class CCAIClient : ICCAIClient
                 request.Headers.Add(key, value);
             }
         }
-        
+
         using var response = await _httpClient.SendAsync(request, cancellationToken);
         response.EnsureSuccessStatusCode();
     }
