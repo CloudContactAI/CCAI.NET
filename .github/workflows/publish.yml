@@ -1,0 +1,90 @@
+name: Release C# SDK
+
+on:
+  push:
+    tags:
+      - "release/v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dotnet-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and publish to NuGet
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore dependencies
+        run: |
+          set -euo pipefail
+          dotnet restore
+
+      - name: Build
+        run: |
+          set -euo pipefail
+          dotnet build --configuration Release --no-restore
+
+      - name: Pack
+        run: |
+          set -euo pipefail
+
+          rm -rf ./artifacts
+          mkdir -p ./artifacts
+
+          VERSION="${GITHUB_REF_NAME#release/v}"
+
+          echo "Packing version: $VERSION"
+
+          dotnet pack \
+            --configuration Release \
+            --no-build \
+            -o ./artifacts \
+            /p:PackageVersion="$VERSION" \
+            /p:ContinuousIntegrationBuild=true
+
+          if [ -z "$(ls -A ./artifacts/*.nupkg 2>/dev/null)" ]; then
+            echo "Error: No .nupkg files generated"
+            exit 1
+          fi
+
+          ls -lh ./artifacts/*.nupkg
+
+      - name: Validate NuGet secret
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${NUGET_API_KEY:-}" ]; then
+            echo "Error: NUGET_API_KEY secret not configured"
+            exit 1
+          fi
+
+      - name: Publish to NuGet
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          set -euo pipefail
+
+          for nupkg in ./artifacts/*.nupkg; do
+            echo "Publishing $nupkg..."
+
+            dotnet nuget push "$nupkg" \
+              --api-key "$NUGET_API_KEY" \
+              --source "https://api.nuget.org/v3/index.json" \
+              --skip-duplicate
+          done
+
+          echo "Successfully published package(s) to NuGet"
