@@ -9,6 +9,7 @@ using System.Text.Json.Serialization;
 using CCAI.NET.Brands;
 using CCAI.NET.Campaigns;
 using CCAI.NET.Contact;
+using CCAI.NET.ContactValidator;
 using CCAI.NET.Email;
 using CCAI.NET.SMS;
 using CCAI.NET.Webhook;
@@ -59,6 +60,11 @@ public interface ICCAIClient : IDisposable
     /// Campaign service for managing 10DLC campaign registrations
     /// </summary>
     CampaignService Campaigns { get; }
+
+    /// <summary>
+    /// Contact validator service for validating email and phone contacts
+    /// </summary>
+    IContactValidatorService ContactValidator { get; }
 
     /// <summary>
     /// Get the client ID
@@ -285,6 +291,11 @@ public class CCAIClient : ICCAIClient
     public CampaignService Campaigns { get; }
 
     /// <summary>
+    /// Contact validator service for validating email and phone contacts
+    /// </summary>
+    public IContactValidatorService ContactValidator { get; }
+
+    /// <summary>
     /// Create a new CCAI client instance
     /// </summary>
     /// <param name="config">Configuration for the client</param>
@@ -333,6 +344,7 @@ public class CCAIClient : ICCAIClient
         Contact = new ContactService(this);
         Brands = new BrandService(this);
         Campaigns = new CampaignService(this);
+        ContactValidator = new ContactValidatorService(this);
     }
 
     /// <summary>
