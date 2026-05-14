@@ -3,7 +3,7 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /sdk
 COPY src/CCAI.NET/CCAI.NET.csproj ./src/CCAI.NET/
 COPY integration/CCAITest.csproj ./integration/
-RUN echo "" > RELEASE-NOTES-v1.4.5.md
+RUN echo "" > RELEASE-NOTES-v1.5.0.md
 RUN dotnet restore ./integration/CCAITest.csproj
 
 COPY src/ ./src/
