@@ -10,6 +10,7 @@ A C# client library for interacting with the [CloudContactAI](https://cloudconta
 - Brand registration and management for TCR verification
 - Campaign registration and management for TCR carrier vetting
 - Manage contact opt-out preferences (SetDoNotText)
+- Validate email addresses (valid/invalid/risky) and phone numbers (valid/invalid/landline)
 - Webhook management: register, list, update, delete
 - Webhook signature verification
 - Template variable substitution (`${firstName}`, `${lastName}`)
@@ -278,6 +279,40 @@ await ccai.Contact.SetDoNotTextAsync(false, phone: "+15551234567");
 
 // Opt out by contactId
 await ccai.Contact.SetDoNotTextAsync(true, contactId: "contact-abc-123");
+```
+
+### Contact Validator
+
+Validate email addresses and phone numbers.
+
+> Bulk endpoints accept up to 50 contacts per request and are processed server-side in chunks.
+
+```csharp
+using CCAI.NET;
+using CCAI.NET.ContactValidator;
+
+// Validate a single email
+var emailResult = await ccai.ContactValidator.ValidateEmailAsync("user@example.com");
+Console.WriteLine(emailResult.Status); // "valid" | "invalid" | "risky"
+
+// Validate multiple emails (up to 50, processed server-side in chunks)
+var bulkEmails = await ccai.ContactValidator.ValidateEmailsAsync(new[] {
+    "user@example.com",
+    "bad@invalid.xyz"
+});
+Console.WriteLine(bulkEmails.Summary.Total); // 2
+Console.WriteLine(bulkEmails.Summary.Valid);  // 1
+
+// Validate a single phone number
+var phoneResult = await ccai.ContactValidator.ValidatePhoneAsync("+15551234567", "US");
+Console.WriteLine(phoneResult.Status); // "valid" | "invalid" | "landline"
+
+// Validate multiple phone numbers (up to 50, processed server-side in chunks)
+var bulkPhones = await ccai.ContactValidator.ValidatePhonesAsync(new[] {
+    new PhoneInput { Phone = "+15551234567" },
+    new PhoneInput { Phone = "+15559876543", CountryCode = "US" }
+});
+Console.WriteLine(bulkPhones.Summary.Landline); // 1
 ```
 
 ### Webhook Management
