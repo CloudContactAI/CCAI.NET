@@ -14,7 +14,7 @@ public class EmailValidationResult
     /// <summary>
     /// The validated email address
     /// </summary>
-    [JsonPropertyName("contact")]
+    [JsonPropertyName("contactField")]
     public string ContactField { get; set; } = string.Empty;
 
     /// <summary>
@@ -44,7 +44,7 @@ public class PhoneValidationResult
     /// <summary>
     /// The validated phone number
     /// </summary>
-    [JsonPropertyName("contact")]
+    [JsonPropertyName("contactField")]
     public string ContactField { get; set; } = string.Empty;
 
     /// <summary>
