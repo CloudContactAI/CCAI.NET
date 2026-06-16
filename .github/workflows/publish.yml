@@ -47,7 +47,7 @@ jobs:
 
           echo "Packing version: $VERSION"
 
-          dotnet pack \
+          dotnet pack src/CCAI.NET/CCAI.NET.csproj \
             --configuration Release \
             --no-build \
             -o ./artifacts \
