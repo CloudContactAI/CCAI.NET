@@ -11,13 +11,13 @@ public class MmsSend
     {
         var config = new CCAIConfig
         {
-            ClientId = "2YOUR_CLIENT_ID",
+            ClientId = "YOUR_CLIENT_ID",
             ApiKey = "YOUR_API_KEY"
         };
-        
+
         using var ccai = new CCAIClient(config);
-        
-        var imagePath = "/Users/andreas/CCAI.NET/imageNET.jpg";
+
+        var imagePath = "path/to/your/image.jpg";
         var contentType = "image/jpeg";
         
         try
