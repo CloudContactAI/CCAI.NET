@@ -451,14 +451,6 @@ using var ccai = new CCAIClient(config);
 var webhookConfig = new WebhookConfig
 {
     Url = "https://your-webhook-endpoint.com/webhook",
-    Events = new List<WebhookEventType>
-    {
-        WebhookEventType.MessageSent,
-        WebhookEventType.MessageIncoming,
-        WebhookEventType.MessageExcluded,
-        WebhookEventType.MessageErrorCarrier,
-        WebhookEventType.MessageErrorCloudContact
-    },
     Secret = "your-webhook-secret"
 };
 
@@ -476,7 +468,6 @@ foreach (var webhook in webhooks)
 var updatedConfig = new WebhookConfig
 {
     Url = "https://your-updated-endpoint.com/webhook",
-    Events = new List<WebhookEventType> { WebhookEventType.MessageSent },
     Secret = "your-updated-secret"
 };
 
@@ -486,30 +477,32 @@ var updatedWebhook = await ccai.Webhook.UpdateAsync(registration.Id, updatedConf
 var deleteResponse = await ccai.Webhook.DeleteAsync(registration.Id);
 Console.WriteLine($"Webhook deleted: {deleteResponse.Success}");
 
-// Verify webhook signature (in your webhook handler)
-var signature = request.headers['x-ccai-signature'];
-var json = request.body;
-var payload = JsonDocument.Parse(json);
-var clientId = config.ClientId;
-var eventHash = payload.RootElement.GetProperty("eventHash").GetString() ?? "";
+// Verify webhook signature (in your webhook handler, e.g. an ASP.NET Core endpoint)
+public void HandleLegacyWebhook(string json, string signature)
+{
+    var webhookSecret = "your-webhook-secret"; // The secret from webhook registration
+    var payload = JsonDocument.Parse(json);
+    var clientId = config.ClientId;
+    var eventHash = payload.RootElement.GetProperty("eventHash").GetString() ?? "";
 
-if (ccai.Webhook.VerifySignature(signature, clientId, eventHash, webhookSecret))
-{
-    // Signature is valid, process the webhook
-    var webhookEvent = ccai.Webhook.ParseEvent(json);
-    
-    if (webhookEvent is MessageSentEvent sentEvent)
+    if (ccai.Webhook.VerifySignature(signature, clientId, eventHash, webhookSecret))
     {
-        Console.WriteLine($"Message sent to: {sentEvent.To}");
+        // Signature is valid, process the webhook
+        var webhookEvent = ccai.Webhook.ParseEvent(json);
+
+        if (webhookEvent is MessageSentEvent sentEvent)
+        {
+            Console.WriteLine($"Message sent to: {sentEvent.To}");
+        }
+        else if (webhookEvent is MessageIncomingEvent incomingEvent)
+        {
+            Console.WriteLine($"Message received from: {incomingEvent.From}");
+        }
     }
-    else if (webhookEvent is MessageIncomingEvent incomingEvent)
+    else
     {
-        Console.WriteLine($"Message received from: {incomingEvent.From}");
+        Console.WriteLine("Invalid signature");
     }
-}
-else
-{
-    Console.WriteLine("Invalid signature");
 }
 ```
 
@@ -600,6 +593,8 @@ var campaign = await ccai.Campaigns.CreateAsync(new CampaignRequest
     SubUseCases = new List<string> { "CUSTOMER_CARE", "TWO_FACTOR_AUTHENTICATION", "ACCOUNT_NOTIFICATION" },
     Description = "Security codes and support messaging.",
     MessageFlow = "Users opt-in via signup form at https://example.com/signup",
+    TermsLink = "https://example.com/terms",
+    PrivacyLink = "https://example.com/privacy",
     HasEmbeddedLinks = true,
     HasEmbeddedPhone = false,
     IsAgeGated = false,
@@ -641,6 +636,8 @@ await ccai.Campaigns.DeleteAsync(campaign.Id);
 `TWO_FACTOR_AUTHENTICATION`, `ACCOUNT_NOTIFICATION`, `CUSTOMER_CARE`, `DELIVERY_NOTIFICATION`, `FRAUD_ALERT`, `HIGHER_EDUCATION`, `LOW_VOLUME_MIXED`, `MARKETING`, `MIXED`, `POLLING_VOTING`, `PUBLIC_SERVICE_ANNOUNCEMENT`, `SECURITY_ALERT`
 
 > Note: `MIXED` and `LOW_VOLUME_MIXED` campaigns require 2–3 `SubUseCases`.
+
+> `TermsLink` and `PrivacyLink` are optional fields on `CampaignRequest`/`CampaignResponse`.
 
 #### Sub-Use Cases
 
@@ -686,7 +683,6 @@ if (uploadSuccess)
 var options = new SMSOptions
 {
     Timeout = 60,
-    Retries = 3,
     OnProgress = status => Console.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - {status}")
 };
 
