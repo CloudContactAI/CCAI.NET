@@ -128,7 +128,7 @@ public class SMSService : ISMSService
             throw new ArgumentException("At least one account is required", nameof(request.Accounts));
         }
         
-        if (string.IsNullOrEmpty(request.Message))
+        if (string.IsNullOrEmpty(request.Message) && request.TemplateId is null)
         {
             throw new ArgumentException("Message is required", nameof(request.Message));
         }

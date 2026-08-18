@@ -1,6 +1,7 @@
-// .NET SDK integration tests — 52 tests
+// .NET SDK integration tests — 54 tests
 // Covers: SMS (1-6), MMS (7-17), Email (18-22), Webhook (23-29), Contact (30-31),
-// Brands (32-36), Campaigns (37-42), ContactValidator (43-46), Negative cases (47-52)
+// Brands (32-36), Campaigns (37-42), ContactValidator (43-46), Negative cases (47-52),
+// SMS Templates (53-54)
 //
 // Test results use three states:
 //   PASS — the test ran and all assertions held
@@ -111,7 +112,7 @@ string[] requiredEnv =
     "CCAI_TEST_FIRST_NAME", "CCAI_TEST_LAST_NAME",
     "CCAI_TEST_FIRST_NAME_2", "CCAI_TEST_LAST_NAME_2",
     "CCAI_TEST_FIRST_NAME_3", "CCAI_TEST_LAST_NAME_3",
-    "WEBHOOK_URL",
+    "WEBHOOK_URL", "CCAI_TEST_TEMPLATE_ID",
 ];
 var missing = requiredEnv.Where(k => string.IsNullOrEmpty(Environment.GetEnvironmentVariable(k))).ToList();
 if (missing.Count > 0)
@@ -134,6 +135,7 @@ var fn2      = Environment.GetEnvironmentVariable("CCAI_TEST_FIRST_NAME_2")!;
 var ln2      = Environment.GetEnvironmentVariable("CCAI_TEST_LAST_NAME_2")!;
 var fn3      = Environment.GetEnvironmentVariable("CCAI_TEST_FIRST_NAME_3")!;
 var ln3      = Environment.GetEnvironmentVariable("CCAI_TEST_LAST_NAME_3")!;
+var templateId = long.Parse(Environment.GetEnvironmentVariable("CCAI_TEST_TEMPLATE_ID")!);
 
 // Unique per-run suffix so parallel SDK runs don't collide on the same webhook URL
 var runId = $"dotnet-{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
@@ -821,6 +823,24 @@ try
         var resp = await client.MMS.SendAsync(fakeKey,
             [new Account { FirstName = fn1, LastName = ln1, Phone = phone1 }],
             "nonexistent fileKey accepted", ".NET Permissive 52");
+        AssertSmsResponse(resp);
+    });
+
+    Console.WriteLine("\n--- SMS Templates ---");
+
+    await Run("53 SMS.SendWithTemplateAsync", async () =>
+    {
+        var resp = await client.SMS.SendWithTemplateAsync(
+            [
+                new Account { FirstName = fn1, LastName = ln1, Phone = phone1 },
+                new Account { FirstName = fn2, LastName = ln2, Phone = phone2 },
+            ], templateId, ".NET Template Test");
+        AssertSmsResponse(resp);
+    });
+
+    await Run("54 SMS.SendSingleWithTemplateAsync", async () =>
+    {
+        var resp = await client.SMS.SendSingleWithTemplateAsync(fn1, ln1, phone1, templateId, ".NET Single Template Test");
         AssertSmsResponse(resp);
     });
 }
