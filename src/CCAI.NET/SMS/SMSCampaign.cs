@@ -33,4 +33,11 @@ public record SMSCampaign
     /// </summary>
     [JsonPropertyName("senderPhone")]
     public string? SenderPhone { get; init; }
+
+    /// <summary>
+    /// Optional template ID for template-controlled accounts.
+    /// When provided, the backend resolves the message from the template server-side.
+    /// </summary>
+    [JsonPropertyName("templateId")]
+    public long? TemplateId { get; init; }
 }
