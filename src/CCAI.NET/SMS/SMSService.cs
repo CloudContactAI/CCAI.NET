@@ -69,6 +69,30 @@ public interface ISMSService
         string? customData = null,
         SMSOptions? options = null,
         string? senderPhone = null);
+
+    /// <summary>
+    /// Send using a pre-approved template (for template-controlled accounts)
+    /// </summary>
+    Task<SMSResponse> SendWithTemplateAsync(
+        IEnumerable<Account> accounts,
+        long templateId,
+        string title,
+        SMSOptions? options = null,
+        string? senderPhone = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Send to a single recipient using a pre-approved template
+    /// </summary>
+    Task<SMSResponse> SendSingleWithTemplateAsync(
+        string firstName,
+        string lastName,
+        string phone,
+        long templateId,
+        string title,
+        SMSOptions? options = null,
+        string? senderPhone = null,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -128,7 +152,8 @@ public class SMSService : ISMSService
             Accounts = accountsList,
             Message = request.Message,
             Title = request.Title,
-            SenderPhone = request.SenderPhone
+            SenderPhone = request.SenderPhone,
+            TemplateId = request.TemplateId
         };
         
         try
@@ -295,5 +320,46 @@ public class SMSService : ISMSService
         string? senderPhone = null)
     {
         return SendSingleAsync(firstName, lastName, phone, message, title, customAccountId, customData, options, senderPhone).GetAwaiter().GetResult();
+    }
+
+    /// <summary>
+    /// Send SMS using a pre-approved template (for template-controlled accounts).
+    /// The message body is resolved server-side from the template.
+    /// </summary>
+    public Task<SMSResponse> SendWithTemplateAsync(
+        IEnumerable<Account> accounts,
+        long templateId,
+        string title,
+        SMSOptions? options = null,
+        string? senderPhone = null,
+        CancellationToken cancellationToken = default)
+    {
+        var request = new SMSRequest
+        {
+            Accounts = accounts,
+            Message = string.Empty,
+            Title = title,
+            SenderPhone = senderPhone,
+            Options = options,
+            TemplateId = templateId
+        };
+        return SendAsync(request, cancellationToken);
+    }
+
+    /// <summary>
+    /// Send SMS to a single recipient using a pre-approved template.
+    /// </summary>
+    public Task<SMSResponse> SendSingleWithTemplateAsync(
+        string firstName,
+        string lastName,
+        string phone,
+        long templateId,
+        string title,
+        SMSOptions? options = null,
+        string? senderPhone = null,
+        CancellationToken cancellationToken = default)
+    {
+        var accounts = new[] { new Account { FirstName = firstName, LastName = lastName, Phone = phone } };
+        return SendWithTemplateAsync(accounts, templateId, title, options, senderPhone, cancellationToken);
     }
 }

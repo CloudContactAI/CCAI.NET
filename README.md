@@ -97,6 +97,30 @@ var campaignResponse = await ccai.SMS.SendAsync(
 Console.WriteLine($"Campaign sent with ID: {campaignResponse.CampaignId}");
 ```
 
+### SMS — Template-Controlled Accounts
+
+If an account has been configured to enforce template-only messaging, all campaigns must reference a pre-approved template ID. Sending a free-text message to such an account will result in a `422` error.
+
+```csharp
+// Send to multiple recipients using a template
+var response = await ccai.SMS.SendWithTemplateAsync(
+    accounts: accounts,
+    templateId: 12345,   // the ID of the approved template
+    title: "My Campaign"
+);
+
+// Send to a single recipient using a template
+var response = await ccai.SMS.SendSingleWithTemplateAsync(
+    firstName: "John",
+    lastName: "Doe",
+    phone: "+15551234567",
+    templateId: 12345,
+    title: "My Campaign"
+);
+```
+
+The message body is resolved server-side from the template. Variable substitution (e.g. `${FirstName}`) is applied automatically using the recipient's account data.
+
 ### MMS Usage
 
 ```csharp
