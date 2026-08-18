@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <PackageId>CloudContactAI.CCAI.NET</PackageId>
-    <Version>1.5.0</Version>
+    <Version>1.6.0</Version>
     <Authors>CloudContactAI LLC</Authors>
     <Company>CloudContactAI LLC</Company>
     <Description>C# client for CloudContactAI API with SMS, MMS, Email, and Webhook support. Enhanced webhook support with new CloudContact event format, contact.unsubscribed events, environment variable configuration, and comprehensive examples.</Description>
