@@ -37,6 +37,12 @@ public record SMSRequest
     /// Optional sender phone number
     /// </summary>
     public string? SenderPhone { get; init; }
+
+    /// <summary>
+    /// Optional template ID for template-controlled accounts.
+    /// When provided, the message body is resolved server-side from the template.
+    /// </summary>
+    public long? TemplateId { get; init; }
     
     /// <summary>
     /// Create an SMS request for multiple recipients

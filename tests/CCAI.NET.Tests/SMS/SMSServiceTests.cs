@@ -460,4 +460,52 @@ public class SMSServiceTests
         Assert.Equal("SMS sent successfully", result.Message);
         Assert.Equal("resp-abc-123", result.ResponseId);
     }
+
+    [Fact]
+    public async Task SendWithTemplateAsync_ShouldIncludeTemplateId()
+    {
+        // Arrange
+        var expectedResponse = new SMSResponse { Id = "msg-tpl-1", Status = "sent", CampaignId = "camp-tpl-1" };
+        _mockClient.Setup(c => c.RequestAsync<SMSResponse>(
+                It.IsAny<HttpMethod>(),
+                It.IsAny<string>(),
+                It.IsAny<object>(),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<Dictionary<string, string>>()))
+            .ReturnsAsync(expectedResponse);
+
+        var accounts = new[] { new Account { FirstName = "John", LastName = "Doe", Phone = "+15551234567" } };
+
+        // Act
+        var result = await _smsService.SendWithTemplateAsync(accounts, 12345L, "Template Campaign");
+
+        // Assert
+        Assert.Equal("msg-tpl-1", result.Id);
+        _mockClient.Verify(c => c.RequestAsync<SMSResponse>(
+            It.IsAny<HttpMethod>(),
+            It.IsAny<string>(),
+            It.Is<object>(body => body.ToString()!.Contains("12345")),
+            It.IsAny<CancellationToken>(),
+            It.IsAny<Dictionary<string, string>>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task SendSingleWithTemplateAsync_ShouldSendToSingleRecipient()
+    {
+        // Arrange
+        var expectedResponse = new SMSResponse { Id = "msg-tpl-2", Status = "sent" };
+        _mockClient.Setup(c => c.RequestAsync<SMSResponse>(
+                It.IsAny<HttpMethod>(),
+                It.IsAny<string>(),
+                It.IsAny<object>(),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<Dictionary<string, string>>()))
+            .ReturnsAsync(expectedResponse);
+
+        // Act
+        var result = await _smsService.SendSingleWithTemplateAsync("Jane", "Smith", "+15559876543", 99L, "Single Template");
+
+        // Assert
+        Assert.Equal("msg-tpl-2", result.Id);
+    }
 }
