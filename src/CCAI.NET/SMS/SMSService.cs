@@ -147,6 +147,17 @@ public class SMSService : ISMSService
         // Prepare the endpoint and data
         var endpoint = $"/clients/{_client.GetClientId()}/campaigns/direct";
         
+        // The API carries custom data per recipient (as "messageData"), so a campaign-level
+        // CustomData is applied to every account that does not already define its own
+        if (!string.IsNullOrEmpty(request.CustomData))
+        {
+            accountsList = accountsList
+                .Select(account => account.CustomData is null
+                    ? account with { CustomData = request.CustomData }
+                    : account)
+                .ToList();
+        }
+        
         var campaignData = new SMSCampaign
         {
             Accounts = accountsList,
