@@ -1,7 +1,7 @@
 // .NET SDK integration tests — 54 tests
 // Covers: SMS (1-6), MMS (7-17), Email (18-22), Webhook (23-29), Contact (30-31),
 // Brands (32-36), Campaigns (37-42), ContactValidator (43-46), Negative cases (47-52),
-// SMS Templates (53-54)
+// SMS Templates (53-54, dedicated template account)
 //
 // Test results use three states:
 //   PASS — the test ran and all assertions held
@@ -112,7 +112,7 @@ string[] requiredEnv =
     "CCAI_TEST_FIRST_NAME", "CCAI_TEST_LAST_NAME",
     "CCAI_TEST_FIRST_NAME_2", "CCAI_TEST_LAST_NAME_2",
     "CCAI_TEST_FIRST_NAME_3", "CCAI_TEST_LAST_NAME_3",
-    "WEBHOOK_URL", "CCAI_TEST_TEMPLATE_ID",
+    "WEBHOOK_URL",
 ];
 var missing = requiredEnv.Where(k => string.IsNullOrEmpty(Environment.GetEnvironmentVariable(k))).ToList();
 if (missing.Count > 0)
@@ -135,7 +135,10 @@ var fn2      = Environment.GetEnvironmentVariable("CCAI_TEST_FIRST_NAME_2")!;
 var ln2      = Environment.GetEnvironmentVariable("CCAI_TEST_LAST_NAME_2")!;
 var fn3      = Environment.GetEnvironmentVariable("CCAI_TEST_FIRST_NAME_3")!;
 var ln3      = Environment.GetEnvironmentVariable("CCAI_TEST_LAST_NAME_3")!;
-var templateId = long.Parse(Environment.GetEnvironmentVariable("CCAI_TEST_TEMPLATE_ID")!);
+var templateIdRaw = Environment.GetEnvironmentVariable("CCAI_TEST_TEMPLATE_ID");
+long? templateId = string.IsNullOrEmpty(templateIdRaw) ? null : long.Parse(templateIdRaw);
+var templateClientId = Environment.GetEnvironmentVariable("CCAI_TEMPLATE_CLIENT_ID");
+var templateApiKey = Environment.GetEnvironmentVariable("CCAI_TEMPLATE_API_KEY");
 
 // Unique per-run suffix so parallel SDK runs don't collide on the same webhook URL
 var runId = $"dotnet-{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
@@ -828,19 +831,35 @@ try
 
     Console.WriteLine("\n--- SMS Templates ---");
 
+    // Templates run against a separate, dedicated account (CCAI_TEMPLATE_CLIENT_ID/
+    // API_KEY): the main test account can't have template usage configured, since
+    // that starts requiring a templateId on every campaign — including the plain
+    // SMS/MMS/Email sends tested above.
+    CCAIClient TemplateClient()
+    {
+        if (string.IsNullOrEmpty(templateClientId) || string.IsNullOrEmpty(templateApiKey) || templateId is null)
+            throw new SkipTestException("CCAI_TEMPLATE_CLIENT_ID/CCAI_TEMPLATE_API_KEY/CCAI_TEST_TEMPLATE_ID not set");
+        return new CCAIClient(new CCAIConfig
+        {
+            ClientId = templateClientId,
+            ApiKey = templateApiKey,
+            UseTestEnvironment = Environment.GetEnvironmentVariable("CCAI_BASE_URL") is null
+        });
+    }
+
     await Run("53 SMS.SendWithTemplateAsync", async () =>
     {
-        var resp = await client.SMS.SendWithTemplateAsync(
+        var resp = await TemplateClient().SMS.SendWithTemplateAsync(
             [
                 new Account { FirstName = fn1, LastName = ln1, Phone = phone1 },
                 new Account { FirstName = fn2, LastName = ln2, Phone = phone2 },
-            ], templateId, ".NET Template Test");
+            ], templateId!.Value, ".NET Template Test");
         AssertSmsResponse(resp);
     });
 
     await Run("54 SMS.SendSingleWithTemplateAsync", async () =>
     {
-        var resp = await client.SMS.SendSingleWithTemplateAsync(fn1, ln1, phone1, templateId, ".NET Single Template Test");
+        var resp = await TemplateClient().SMS.SendSingleWithTemplateAsync(fn1, ln1, phone1, templateId!.Value, ".NET Single Template Test");
         AssertSmsResponse(resp);
     });
 }
