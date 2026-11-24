@@ -8,10 +8,17 @@ namespace CCAI.NET.ContactValidator;
 /// </summary>
 public interface IContactValidatorService
 {
-    /// <summary>Validate a single email address (async)</summary>
+    /// <summary>
+    /// Validate a single email address with Amazon SES (async). Throws <see cref="HttpRequestException"/> with
+    /// <c>StatusCode</c> 403 when Email Address Validation is not enabled for the account, and 502 when SES rejects the check.
+    /// </summary>
     Task<EmailValidationResult> ValidateEmailAsync(string email, CancellationToken cancellationToken = default);
 
-    /// <summary>Validate multiple email addresses up to the configured bulk limit (async)</summary>
+    /// <summary>
+    /// Validate multiple email addresses, up to 10 per request (async). Throws <see cref="HttpRequestException"/> with
+    /// <c>StatusCode</c> 403 when Email Address Validation is not enabled for the account. An address that SES fails to
+    /// check comes back as "invalid", with the reason in <c>Metadata["error"]</c>.
+    /// </summary>
     Task<BulkEmailValidationResult> ValidateEmailsAsync(IEnumerable<string> emails, CancellationToken cancellationToken = default);
 
     /// <summary>Validate a single phone number in E.164 format (async)</summary>
