@@ -339,6 +339,62 @@ var bulkPhones = await ccai.ContactValidator.ValidatePhonesAsync(new[] {
 Console.WriteLine(bulkPhones.Summary.Landline); // 1
 ```
 
+#### Email validation details
+
+Email validation uses Amazon SES. Nothing is sent to the address. Besides `Status` and `Metadata["safe_to_send"]`, each `EmailValidationResult` has these optional properties (read from `Metadata`, and `null` when the response does not have them):
+
+| Property | Type | Description |
+|---|---|---|
+| `Verdict` | `string?` | The overall verdict: `"HIGH"`, `"MEDIUM"`, `"LOW"` or `"UNKNOWN"`. A verdict SES does not return is `"UNKNOWN"`. |
+| `Checks` | `EmailValidationChecks?` | Six checks, each with its own verdict (see below). |
+| `ValidatedAt` | `DateTimeOffset?` | When SES checked the address. `null` when the address was rejected without a check. |
+| `Reused` | `bool?` | `true` when the result is a saved check from the last 30 days, instead of a new one. |
+
+`Metadata["error"]` says why an address was rejected or could not be checked, for example `"Invalid email format"`.
+
+| Check | Meaning | Good value |
+|---|---|---|
+| `HasValidSyntax` | The address follows RFC format rules | `HIGH` |
+| `HasValidDnsRecords` | The domain exists and has DNS/MX records to receive mail | `HIGH` |
+| `MailboxExists` | The mailbox exists and can receive messages | `HIGH` |
+| `IsRoleAddress` | A role address such as `admin@`, `support@` or `info@` | `LOW` |
+| `IsDisposable` | A disposable or temporary email provider | `LOW` |
+| `IsRandomInput` | The address looks randomly generated | `LOW` |
+
+`Status` follows from the verdicts: `LOW` is `invalid`; `MEDIUM`, an unknown verdict, or a disposable address is `risky`; `HIGH` is `valid`. `safe_to_send` is `true` only for `valid`, and `ai_verdict` repeats `Status`.
+
+```csharp
+var result = await ccai.ContactValidator.ValidateEmailAsync("user@example.com");
+Console.WriteLine(result.Verdict);              // "HIGH"
+Console.WriteLine(result.Checks?.IsDisposable); // "LOW"
+Console.WriteLine(result.ValidatedAt);          // 11/13/2026 3:02:11 PM +00:00
+Console.WriteLine(result.Reused);               // False
+```
+
+The properties are optional: results from before the account had Email Address Validation, and addresses that SES failed to check in a bulk request, do not have them. A saved result is reused for 30 days, so asking again for the same address inside that time is free and does not count toward the quota. Bulk email requests accept up to 10 addresses.
+
+#### Errors
+
+A failed request throws `HttpRequestException`; read the HTTP status from its `StatusCode`:
+
+| Status | When |
+|---|---|
+| `400` | The request has no body, or more than 10 emails. |
+| `403` | Email validation is not enabled for the account. Ask CloudContactAI to turn it on. |
+| `429` | The account used its quota of SES checks (10 per minute). Retry after a minute. |
+| `502` | SES rejected the check. If your account uses its own AWS keys for email, the IAM user needs the `ses:GetEmailAddressInsights` permission. Single email endpoint only: in a bulk request an address that SES fails to check comes back as `invalid`, with the reason in `Metadata["error"]`. |
+
+```csharp
+try
+{
+    await ccai.ContactValidator.ValidateEmailAsync("user@example.com");
+}
+catch (HttpRequestException e) when (e.StatusCode == HttpStatusCode.Forbidden)
+{
+    // Email validation is not enabled for this account
+}
+```
+
 ### Webhook Management
 
 #### CloudContact Webhook Events (New Format)

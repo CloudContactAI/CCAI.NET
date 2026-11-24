@@ -23,6 +23,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="ContactValidator\Fixtures\*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\CCAI.NET\CCAI.NET.csproj" />
   </ItemGroup>
 

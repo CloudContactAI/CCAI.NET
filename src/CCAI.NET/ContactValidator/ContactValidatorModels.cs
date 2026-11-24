@@ -7,6 +7,31 @@ using System.Text.Json.Serialization;
 namespace CCAI.NET.ContactValidator;
 
 /// <summary>
+/// The six checks of an email validation, each with its own Amazon SES verdict:
+/// "HIGH", "MEDIUM", "LOW" or "UNKNOWN" (a verdict SES did not return).
+/// </summary>
+public class EmailValidationChecks
+{
+    /// <summary>The address follows RFC format rules (good value: HIGH)</summary>
+    public string? HasValidSyntax { get; set; }
+
+    /// <summary>The domain exists and has DNS/MX records to receive mail (good value: HIGH)</summary>
+    public string? HasValidDnsRecords { get; set; }
+
+    /// <summary>The mailbox exists and can receive messages (good value: HIGH)</summary>
+    public string? MailboxExists { get; set; }
+
+    /// <summary>A role address such as admin@, support@ or info@ (good value: LOW)</summary>
+    public string? IsRoleAddress { get; set; }
+
+    /// <summary>A disposable or temporary email provider (good value: LOW)</summary>
+    public string? IsDisposable { get; set; }
+
+    /// <summary>The address looks randomly generated (good value: LOW)</summary>
+    public string? IsRandomInput { get; set; }
+}
+
+/// <summary>
 /// Validation result for a single email address
 /// </summary>
 public class EmailValidationResult
@@ -34,6 +59,68 @@ public class EmailValidationResult
     /// </summary>
     [JsonPropertyName("metadata")]
     public Dictionary<string, JsonElement>? Metadata { get; set; }
+
+    // The properties below are read from Metadata. They are null when the response does not have them: the account
+    // does not have Email Address Validation, or the address was not checked (see Metadata["error"]).
+
+    /// <summary>
+    /// The overall verdict: "HIGH", "MEDIUM", "LOW" or "UNKNOWN"
+    /// </summary>
+    [JsonIgnore]
+    public string? Verdict => MetadataString("verdict");
+
+    /// <summary>
+    /// The six checks, each with its own verdict
+    /// </summary>
+    [JsonIgnore]
+    public EmailValidationChecks? Checks
+    {
+        get
+        {
+            if (Metadata == null || !Metadata.TryGetValue("checks", out var checks) || checks.ValueKind != JsonValueKind.Object)
+            {
+                return null;
+            }
+
+            string? Verdict(string name) =>
+                checks.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
+
+            return new EmailValidationChecks
+            {
+                HasValidSyntax = Verdict("hasValidSyntax"),
+                HasValidDnsRecords = Verdict("hasValidDnsRecords"),
+                MailboxExists = Verdict("mailboxExists"),
+                IsRoleAddress = Verdict("isRoleAddress"),
+                IsDisposable = Verdict("isDisposable"),
+                IsRandomInput = Verdict("isRandomInput")
+            };
+        }
+    }
+
+    /// <summary>
+    /// When Amazon SES checked the address. Null when the address was rejected without a check.
+    /// </summary>
+    [JsonIgnore]
+    public DateTimeOffset? ValidatedAt =>
+        Metadata != null && Metadata.TryGetValue("validatedAt", out var value)
+            && value.ValueKind == JsonValueKind.String && value.TryGetDateTimeOffset(out var validatedAt)
+            ? validatedAt
+            : null;
+
+    /// <summary>
+    /// True when the result is a saved check from the last 30 days, instead of a new one
+    /// </summary>
+    [JsonIgnore]
+    public bool? Reused =>
+        Metadata != null && Metadata.TryGetValue("reused", out var value)
+            && (value.ValueKind == JsonValueKind.True || value.ValueKind == JsonValueKind.False)
+            ? value.GetBoolean()
+            : null;
+
+    private string? MetadataString(string name) =>
+        Metadata != null && Metadata.TryGetValue(name, out var value) && value.ValueKind == JsonValueKind.String
+            ? value.GetString()
+            : null;
 }
 
 /// <summary>
